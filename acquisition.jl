@@ -2,6 +2,7 @@ include("shared.jl")
 include("common_model.jl")
 using GenParticleFilters
 using Plots
+using Optim
 gr()
 Plots.GRBackend()
 
@@ -90,6 +91,26 @@ function get_next_obs_x(state, new_xs, x_obs, y_obs)
     k = 2
     e_ucb = zeros(Float64, length(new_xs))
     weights = get_norm_weights(state)
+
+    function get_e_ucb(xs)
+        e_ucb1 = 0
+        for i=1:n_particles
+            trace = state.traces[i]
+            covariance_fn = get_retval(trace)[1]
+            noise = trace[:noise]
+            (conditional_mu, conditional_cov_matrix) = compute_predictive(
+                covariance_fn, noise, x_obs, y_obs, xs)
+
+            mu, var = conditional_mu[1], conditional_cov_matrix[1,1]
+            e_ucb1 += (mu + k * var) * weights[i]
+        end
+        return e_ucb1
+    end
+
+    x0 = zeros(Float64, length(1))
+    x0[1] = 0
+    # print(optimize(get_e_ucb, x0, LBFGS()))
+
 
     for i=1:n_particles
         trace = state.traces[i]

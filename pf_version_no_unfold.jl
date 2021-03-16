@@ -5,9 +5,44 @@ using Plots
 gr()
 Plots.GRBackend()
 
+@gen function model(xs::Vector{Float64})
+    n = length(xs)
+
+    # sample covariance function
+    covariance_fn::Node = @trace(covariance_prior(1), :tree)
+
+    # sample diagonal noise
+    noise = @trace(gamma(1, 1), :noise) + 0.01
+
+    # compute covariance matrix
+    cov_matrix = compute_cov_matrix_vectorized(covariance_fn, noise, xs)
+
+    # sample from multivariate normal
+    ys = Float64[]
+    mu = 0
+    var = cov_matrix[1,1]
+    covm_22_inv = [1/cov_matrix[1,1]]
+    for (i,x) in enumerate(xs)
+        # condition on previous ys
+        if i > 1
+            covm_11 = cov_matrix[i,i]
+            covm_21 = cov_matrix[1:i-1,i]
+            covm_12 = transpose(covm_21)
+            if i > 2
+                covm_22_inv = blockwise_inv(cov_matrix, covm_22_inv, i)
+            end
+            mu = (covm_12 * covm_22_inv * ys)[1]
+            var = covm_11[1] - (covm_12 * covm_22_inv * covm_21)[1]
+        end
+        y = {(:y, i)} ~ normal(mu, sqrt(var))
+        push!(ys, y)
+    end
+    return (covariance_fn, ys)
+end
+
 function particle_filter(xs::Vector{Float64}, ys::Vector{Float64}, n_particles, callback, anim_traj)
     n_obs = length(xs)
-    obs_choices = [choicemap((:state => t => :y, ys[t])) for t=1:n_obs]
+    obs_choices = [choicemap(((:y, t), ys[t])) for t=1:n_obs]
     state = pf_initialize(model, ([xs[1]],), obs_choices[1], n_particles)
     # Iterate across timesteps
     for t=2:n_obs
@@ -123,4 +158,4 @@ anim = @animate for obs in sort!(sorted_obs)
     plot!(p, obs_xs, obs_ys, seriestype = :scatter,  marker = (:circle, 3, 0.6, :orange, stroke(1, 1, :black, :dot)))
 end
 
-gif(anim, "pf_version.gif", fps = 1)
+gif(anim, "ribbon.gif", fps = 1)

@@ -62,39 +62,65 @@ function blockwise_inv(cov_matrix, prev_inv_22, i)
     return covm_22_inv
 end
 
+function cov_matrix_incremental(old_cov_matrix, covariance_fn, xs, var)
+    n_prev = size(old_cov_matrix)[1]
+    new_x = last(xs)
+    # calculate new covariances
+    new_row =  zeros(Float64, 1, n_prev)
+    # new_col = range(0,n,step=1) |> collect
+    # @. new_col = eval_cov(covariance_fn, xs[new_col], new_x) + noise
+    for i=1:n_prev
+        new_row[1, i] = eval_cov(covariance_fn, xs[i], new_x)
+    end
+    # add row and column to covariance matrix
+    cov_matrix = vcat(old_cov_matrix, new_row)
+    new_col = vcat(transpose(new_row), reshape([var], 1, 1))
+    cov_matrix = hcat(cov_matrix, new_col)
+    return cov_matrix
+end
 
-function calc_conditional_dist(t, prev_state, covariance_fn, noise, xs)
-    # state- xs, ys, mus, vars, inv22
+@gen function calc_conditional_dist(t, prev_state, covariance_fn, noise)
+    # state- xs, ys, mus, vars, covm_22_inv, covm_full
+    xs = prev_state[1]
     ys = prev_state[2]
     mus = prev_state[3]
     vars = prev_state[4]
-    inv22 = prev_state[5]
+    covm_22_inv = prev_state[5]
+    cov_matrix = prev_state[6]
+
+    # randomly sample x
+    x ~ uniform(0,0.75)
+    push!(xs, x)
+    # xs = xs[1:t]
+    # x = xs[t]
+    var = eval_cov(covariance_fn, x, x) + noise
 
     i = t
-    if i <= 1
+    if i == 1
         mu = 0.0
-        var = 0
-        inv22 = [1]
+        covm_22_inv = reshape([1/var], 1, 1)
+        cov_matrix = reshape([var], 1, 1)
     end
     if i > 1
         xs = xs[1:i]
-        # TODO: calculate cov_matrix incrementally
-        cov_matrix = compute_cov_matrix_vectorized(covariance_fn, noise, xs)
+        cov_matrix = cov_matrix_incremental(cov_matrix, covariance_fn, xs, var)
         covm_11 = cov_matrix[i,i]
         covm_21 = cov_matrix[1:i-1,i]
         covm_12 = transpose(covm_21)
         if i > 2
-            covm_22_inv = blockwise_inv(cov_matrix, inv22, i)
+            covm_22_inv = blockwise_inv(cov_matrix, covm_22_inv, i)
         end
-        mu = (covm_12 * inv22 * ys)[1]
-        var = covm_11[1] - (covm_12 * inv22 * covm_21)[1]
+        mu = (covm_12 * covm_22_inv * ys)[1]
+        var = covm_11[1] - (covm_12 * covm_22_inv * covm_21)[1]
     end
 
-    y = {(:y, i)} ~ normal(mu, sqrt(var))
+    # sample y from conditional distribution
+    y ~ normal(mu, sqrt(var))
+
     ys = append!(ys, y)
     mus = append!(mus, mu)
     vars = append!(vars, var)
-    state = [xs, ys, mus, vars, inv22]
+    state = [xs, ys, mus, vars, covm_22_inv, cov_matrix]
     return state
 end
 
@@ -109,18 +135,16 @@ get_conditional_ys = Unfold(calc_conditional_dist)
     # sample diagonal noise
     noise = @trace(gamma(1, 1), :noise) + 0.01
 
-    # compute covariance matrix
-    cov_matrix = compute_cov_matrix_vectorized(covariance_fn, noise, xs)
-
     # sample from multivariate normal
+    sampled_xs = Float64[]
     ys = Float64[]
     mus = Float64[]
     vars = Float64[]
-    covm_22 = [1/cov_matrix[1,1]]
-    state = get_conditional_ys(n, [[],ys,mus,vars,covm_22], covariance_fn, noise, xs)
+    covm_22 = []
+    covariance_matrix = []
+    vars = Float64[]
+    state ~ get_conditional_ys(n, [sampled_xs,ys,mus,vars,covm_22, covariance_matrix], covariance_fn, noise)
     ys = last(state)[2]
-    println(n)
-    println("ys", ys)
     return (covariance_fn, ys)
 end
 
