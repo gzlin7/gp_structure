@@ -4,11 +4,12 @@ using GenParticleFilters
 using Plots
 gr()
 Plots.GRBackend()
+@load_generated_functions()
 
 function particle_filter(xs::Vector{Float64}, ys::Vector{Float64}, n_particles, callback, anim_traj)
     n_obs = length(xs)
-    obs_choices = [choicemap((:state => t => :y, ys[t])) for t=1:n_obs]
-    state = pf_initialize(model, ([xs[1]],), obs_choices[1], n_particles)
+    obs_choices = [choicemap((:state => t => :x, xs[t]), (:state => t => :y, ys[t])) for t=1:n_obs]
+    state = pf_initialize(model, (1,), obs_choices[1], n_particles)
     # Iterate across timesteps
     for t=2:n_obs
         # # Resample and rejuvenate if the effective sample size is too low
@@ -20,7 +21,7 @@ function particle_filter(xs::Vector{Float64}, ys::Vector{Float64}, n_particles, 
             pf_rejuvenate!(state, mh, (noise_proposal, ()))
         end
         # Update filter state with new observation at timestep t
-        pf_update!(state, (xs[1:t],), (UnknownChange(),), obs_choices[t])
+        pf_update!(state, (t,), (UnknownChange(),), obs_choices[t])
         if mod(t,10) == 0
             println("number of observations: $t")
             callback(state, xs, ys, anim_traj, t)

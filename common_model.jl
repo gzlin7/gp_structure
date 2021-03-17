@@ -63,19 +63,23 @@ function blockwise_inv(cov_matrix, prev_inv_22, i)
 end
 
 function cov_matrix_incremental(old_cov_matrix, covariance_fn, xs, var)
-    n_prev = size(old_cov_matrix)[1]
+    n = size(old_cov_matrix)[1]
     new_x = last(xs)
     # calculate new covariances
-    new_row =  zeros(Float64, 1, n_prev)
-    # new_col = range(0,n,step=1) |> collect
-    # @. new_col = eval_cov(covariance_fn, xs[new_col], new_x) + noise
-    for i=1:n_prev
-        new_row[1, i] = eval_cov(covariance_fn, xs[i], new_x)
+    cov_matrix = zeros(Float64, n+1, n+1)
+    cov_matrix[1:n, 1:n] = old_cov_matrix
+    new_col = float(range(1,n,step=1) |> collect)
+    function f(idx)
+        eval_cov(covariance_fn, xs[idx], new_x)
     end
-    # add row and column to covariance matrix
-    cov_matrix = vcat(old_cov_matrix, new_row)
-    new_col = vcat(transpose(new_row), reshape([var], 1, 1))
-    cov_matrix = hcat(cov_matrix, new_col)
+    @. new_col = f.(Int(new_col))
+    # new_col = zeros(Float64, n, 1)
+    # for i=1:n
+    #     new_col[i, 1] = eval_cov(covariance_fn, xs[i], new_x)
+    # end
+    cov_matrix[n+1, 1:n] = transpose(new_col)
+    cov_matrix[1:n, n+1] = new_col
+    cov_matrix[n+1,n+1] = var
     return cov_matrix
 end
 
@@ -91,8 +95,6 @@ end
     # randomly sample x
     x ~ uniform(0,0.75)
     push!(xs, x)
-    # xs = xs[1:t]
-    # x = xs[t]
     var = eval_cov(covariance_fn, x, x) + noise
 
     i = t
@@ -117,18 +119,16 @@ end
     # sample y from conditional distribution
     y ~ normal(mu, sqrt(var))
 
-    ys = append!(ys, y)
-    mus = append!(mus, mu)
-    vars = append!(vars, var)
+    ys = [ys; y]
+    mus = [mus; mu]
+    vars = [vars; var]
     state = [xs, ys, mus, vars, covm_22_inv, cov_matrix]
     return state
 end
 
 get_conditional_ys = Unfold(calc_conditional_dist)
 
-@gen function model(xs::Vector{Float64})
-    n = length(xs)
-
+@gen (static) function model(n)
     # sample covariance function
     covariance_fn::Node = @trace(covariance_prior(1), :tree)
 
