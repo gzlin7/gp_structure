@@ -1,5 +1,5 @@
 include("shared.jl")
-include("common_model.jl")
+include("unfold_model.jl")
 using GenParticleFilters
 using Plots
 gr()
@@ -31,7 +31,7 @@ function particle_filter(xs::Vector{Float64}, ys::Vector{Float64}, n_particles, 
 end
 
 # load and rescale the airline dataset
-(xs, ys) = get_airline_dataset()
+(xs, ys) = get_dataset("test_data")
 xs_train = xs[1:100]
 ys_train = ys[1:100]
 xs_test = xs[101:end]
@@ -70,8 +70,6 @@ n_particles = 100
 @time state = particle_filter(xs_train, ys_train, n_particles, pf_callback, anim_traj)
 
 # visualization
-# (conditional_mu, conditional_cov_matrix) = compute_predictive(
-#     covariance_fn, noise, xs, ys, new_xs)
 
 sorted_obs = []
 for obs in keys(anim_traj)

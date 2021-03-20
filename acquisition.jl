@@ -1,46 +1,11 @@
 include("shared.jl")
-include("common_model.jl")
+include("unfold_model.jl")
 using GenParticleFilters
 using Plots
 using Optim
 gr()
 Plots.GRBackend()
-
-
-@gen function model(xs::Vector{Float64})
-    n = length(xs)
-
-    # sample covariance function
-    covariance_fn::Node = @trace(covariance_prior(1), :tree)
-
-    # sample diagonal noise
-    noise = @trace(gamma(1, 1), :noise) + 0.01
-
-    # compute covariance matrix
-    cov_matrix = compute_cov_matrix_vectorized(covariance_fn, noise, xs)
-
-    # sample from multivariate normal
-    ys = Float64[]
-    mu = 0
-    var = cov_matrix[1,1]
-    covm_22_inv = [1/cov_matrix[1,1]]
-    for (i,x) in enumerate(xs)
-        # condition on previous ys
-        if i > 1
-            covm_11 = cov_matrix[i,i]
-            covm_21 = cov_matrix[1:i-1,i]
-            covm_12 = transpose(covm_21)
-            if i > 2
-                covm_22_inv = blockwise_inv(cov_matrix, covm_22_inv, i)
-            end
-            mu = (covm_12 * covm_22_inv * ys)[1]
-            var = covm_11[1] - (covm_12 * covm_22_inv * covm_21)[1]
-        end
-        y = {(:y, i)} ~ normal(mu, sqrt(var))
-        push!(ys, y)
-    end
-    return (covariance_fn, ys)
-end
+@load_generated_functions()
 
 function particle_filter(xs::Vector{Float64}, ys::Vector{Float64}, n_particles, callback, anim_traj, x_obs_traj, y_obs_traj)
     # n_obs = length(xs)
@@ -48,12 +13,12 @@ function particle_filter(xs::Vector{Float64}, ys::Vector{Float64}, n_particles, 
     obs_idx = [1]
     obs_xs = [xs[1]]
     obs_ys = [ys[1]]
-    obs_choices = [choicemap(((:y, 1), ys[1]))]
+    obs_choices = [choicemap((:state => t => :x, xs[t]), (:state => t => :y, ys[t])) for t=1:n_obs]
     potential_xs = deepcopy(xs)
     deleteat!(potential_xs, 1)
 
 
-    state = pf_initialize(model, ([xs[1]],), obs_choices[1], n_particles)
+    state = pf_initialize(model, (1,), obs_choices[1], n_particles)
     # Iterate across timesteps
     for t=1:n_obs-1
         # Resample and rejuvenate if the effective sample size is too low
@@ -74,7 +39,7 @@ function particle_filter(xs::Vector{Float64}, ys::Vector{Float64}, n_particles, 
 
         # Update filter state with new observation at timestep t
         push!(obs_choices, choicemap(((:y, t+1), ys[next_obs])))
-        pf_update!(state, (obs_xs,), (UnknownChange(),), obs_choices[t+1])
+        pf_update!(state, (t,), (UnknownChange(),), obs_choices[t])
         push!(x_obs_traj, xs[next_obs])
         push!(y_obs_traj, ys[next_obs])
         if mod(t,5) == 0
