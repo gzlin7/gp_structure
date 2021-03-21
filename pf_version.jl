@@ -115,7 +115,7 @@ anim = @animate for obs in sort!(sorted_obs)
                 push!(variances, sqrt(var)/mu)
             end
             pred_ys = mvnormal(conditional_mu, conditional_cov_matrix)
-            plot!(p,pred_xs,pred_ys, linealpha = weight*7, ribbon=variances, fillalpha=weight*3)
+            plot!(p,pred_xs,pred_ys, linealpha = weight*10, ribbon=variances, fillalpha=weight*2)
         end
     end
     plot!(p, inter_obs_x, inter_obs_y, ribbon=obs_variances,  fillalpha=0.3)
