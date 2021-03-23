@@ -5,58 +5,20 @@ using Plots
 using Optim
 gr()
 Plots.GRBackend()
-# @load_generated_functions()
-
-@gen function model(xs::Vector{Float64})
-    n = length(xs)
-
-    # sample covariance function
-    covariance_fn::Node = @trace(covariance_prior(1), :tree)
-
-    # sample diagonal noise
-    noise = @trace(gamma(1, 1), :noise) + 0.01
-
-    # compute covariance matrix
-    cov_matrix = compute_cov_matrix_vectorized(covariance_fn, noise, xs)
-
-    # sample from multivariate normal
-    ys = Float64[]
-    mu = 0
-    var = cov_matrix[1,1]
-    covm_22_inv = [1/cov_matrix[1,1]]
-    for (i,x) in enumerate(xs)
-        # condition on previous ys
-        if i > 1
-            covm_11 = cov_matrix[i,i]
-            covm_21 = cov_matrix[1:i-1,i]
-            covm_12 = transpose(covm_21)
-            if i > 2
-                covm_22_inv = blockwise_inv(cov_matrix, covm_22_inv, i)
-            end
-            mu = (covm_12 * covm_22_inv * ys)[1]
-            var = covm_11[1] - (covm_12 * covm_22_inv * covm_21)[1]
-        end
-        y = {(:y, i)} ~ normal(mu, sqrt(var))
-        push!(ys, y)
-    end
-    return (covariance_fn, ys)
-end
+@load_generated_functions()
 
 function particle_filter(xs::Vector{Float64}, ys::Vector{Float64}, n_particles, callback, anim_traj, x_obs_traj, y_obs_traj)
     # n_obs = length(xs)
-    n_obs = 100
+    n_obs = 50
     obs_idx = [1]
     obs_xs = [xs[1]]
     obs_ys = [ys[1]]
-    # obs_choices = [choicemap((:state => t => :x, xs[t]), (:state => t => :y, ys[t])) for t=1:n_obs]
-    # obs_choices = [choicemap(((:y, t), ys[t])) for t=1:n_obs]
-    obs_choices = [choicemap(((:y, 1), ys[1]))]
+    obs_choices = [choicemap((:state => 1 => :x, xs[1]), (:state => 1 => :y, ys[1]))]
     # keep track of xs we have not evaluated yet
     potential_xs = deepcopy(xs)
     deleteat!(potential_xs, 1)
 
-    state = pf_initialize(model, ([xs[1]],), obs_choices[1], n_particles)
-    # state = pf_initialize(model, (1,), obs_choices[1], n_particles)
+    state = pf_initialize(model, (1,), obs_choices[1], n_particles)
 
     # Iterate across timesteps
     for t=2:n_obs-1
@@ -72,15 +34,16 @@ function particle_filter(xs::Vector{Float64}, ys::Vector{Float64}, n_particles, 
         # select next observation point
         potential_xs_idx = get_next_obs_x(state, potential_xs, obs_xs, obs_ys)
         next_x = potential_xs[potential_xs_idx]
+        deleteat!(potential_xs, potential_xs_idx)
+
         next_obs_idx = findfirst(isequal(next_x), xs)
         push!(obs_idx, next_obs_idx)
         push!(obs_xs, xs[next_obs_idx])
         push!(obs_ys, ys[next_obs_idx])
-        deleteat!(potential_xs, potential_xs_idx)
 
         # Update filter state with new observation at timestep t
-        push!(obs_choices, choicemap(((:y, t), ys[next_obs_idx])))
-        pf_update!(state, (obs_xs,), (UnknownChange(),), obs_choices[t])
+        push!(obs_choices, choicemap((:state => t => :x, xs[next_obs_idx]), (:state => t => :y, ys[next_obs_idx])))
+        pf_update!(state, (t,), (UnknownChange(),), obs_choices[t])
         push!(x_obs_traj, xs[next_obs_idx])
         push!(y_obs_traj, ys[next_obs_idx])
         if mod(t,5) == 0
@@ -94,29 +57,9 @@ end
 
 # iterative
 function get_next_obs_x(state, new_xs, x_obs, y_obs)
-    k = 2
+    k = 0.2
     e_ucb = zeros(Float64, length(new_xs))
     weights = get_norm_weights(state)
-
-    function get_e_ucb(xs)
-        e_ucb1 = 0
-        for i=1:n_particles
-            trace = state.traces[i]
-            covariance_fn = get_retval(trace)[1]
-            noise = trace[:noise]
-            (conditional_mu, conditional_cov_matrix) = compute_predictive(
-                covariance_fn, noise, x_obs, y_obs, xs)
-
-            mu, var = conditional_mu[1], conditional_cov_matrix[1,1]
-            e_ucb1 += (mu + k * var) * weights[i]
-        end
-        return e_ucb1
-    end
-
-    x0 = zeros(Float64, length(1))
-    x0[1] = 0
-    # print(optimize(get_e_ucb, x0, LBFGS()))
-
 
     for i=1:n_particles
         trace = state.traces[i]
@@ -127,10 +70,31 @@ function get_next_obs_x(state, new_xs, x_obs, y_obs)
 
         for j=1:length(new_xs)
             mu, var = conditional_mu[j], conditional_cov_matrix[j,j]
+            # print("mu, var")
+            # println(mu)
+            # println(var)
             e_ucb[j] += (mu + k * var) * weights[i]
         end
     end
     return findmax(e_ucb)[2]
+
+    # function get_e_ucb(x)
+    #     e_ucb1 = 0
+    #     for i=1:n_particles
+    #         trace = state.traces[i]
+    #         covariance_fn = get_retval(trace)[1]
+    #         noise = trace[:noise]
+    #         (conditional_mu, conditional_cov_matrix) = compute_predictive(
+    #             covariance_fn, noise, x_obs, y_obs, x)
+    #
+    #         mu, var = conditional_mu[1], conditional_cov_matrix[1,1]
+    #         e_ucb1 += (mu + k * var) * weights[i]
+    #     end
+    #     return -e_ucb1
+    # end
+    #
+    # x0 = zeros(Float64, length(1))
+    # print(optimize(get_e_ucb, x0, LBFGS()))
 end
 
 # load and rescale the airline dataset
@@ -156,6 +120,7 @@ pf_callback = (state, xs, ys, anim_traj, t) -> begin
     if haskey(anim_traj, t) == false
         push!(anim_traj, t => [])
     end
+    println("===particle weights===")
     for i=1:n_particles
         trace = state.traces[i]
         covariance_fn = get_retval(trace)[1]
@@ -163,9 +128,11 @@ pf_callback = (state, xs, ys, anim_traj, t) -> begin
         push!(anim_traj[t], [covariance_fn, noise, weights[i]])
         mse =  compute_mse(covariance_fn, noise, xs_train, ys_train, xs_test, ys_test)
         pred_ll = predictive_ll(covariance_fn, noise, xs_train, ys_train, xs_test, ys_test)
+        print(weights[i])
         e_mse += mse * weights[i]
         e_pred_ll += pred_ll * weights[i]
     end
+    println("======")
     println("E[mse]: $e_mse, E[predictive log likelihood]: $e_pred_ll")
 end
 
@@ -196,7 +163,7 @@ function make_animation()
         end
 
         # plot observations
-        p = plot(xs, ys, title="$obs Observations, $n_particles Particles ", ylim=(-2, 3), legend=false, linecolor=:red)
+        p = plot(xs_train, ys_train, title="$obs Observations, $n_particles Particles ", ylim=(-2, 3), legend=false, linecolor=:red)
 
         # get indices of the top n particles
         weights = [vals[i][3] for i=1:length(vals)]
@@ -221,7 +188,6 @@ function make_animation()
             end
             # plot predictions for top 10 particles
             if i in best_idxes
-                weights
                 (conditional_mu, conditional_cov_matrix) = compute_predictive(
                     covariance_fn, noise, obs_xs, obs_ys, pred_xs)
                 variances = []
