@@ -2,15 +2,21 @@ using Gen
 using DataFrames
 using CSV
 
-filename = "test_data"
+# data generating functions
+function quadratic(x)
+    return (x - 0.5) ^ 2 + normal(noise_mu, noise_std)
+end
+function cubic(x)
+    # 20 * (x - 0.2)(x - 0.6)(x - 1) + 0.5
+    return 20 * ((x - 0.2)*(x - 0.6)*(x - 1)) + 0.5 + normal(noise_mu, noise_std)
+end
+
+filename = "cubic"
+f = cubic
 n_train = 100
 n_test = 100
 noise_mu = 0
 noise_std = 0.01
-# data generating function
-function f(x)
-    return (x - 0.5) ^ 2 + normal(noise_mu, noise_std)
-end
 
 # training data
 train_xs = [uniform(0.0,1.0) for t=1:n_train]

@@ -100,9 +100,12 @@ function get_next_obs_x(state, new_xs, x_obs, y_obs)
     return argmax(e_ucb)
 end
 
+dataset_name = "cubic"
+animation_name = "acquisition_cubic"
+
 # load and rescale the airline dataset
 # (xs, ys) = get_airline_dataset()
-(xs, ys) = get_dataset("test_data")
+(xs, ys) = get_dataset(dataset_name)
 xs_train = xs[1:100]
 ys_train = ys[1:100]
 xs_test = xs[101:end]
@@ -146,7 +149,7 @@ for obs in keys(anim_traj)
     push!(sorted_obs, obs)
 end
 
-function make_animation()
+function make_animation(animation,name)
     anim = @animate for obs in sort!(sorted_obs)
         vals = anim_traj[obs]
         obs_xs = x_obs_traj[1:obs]
@@ -203,7 +206,7 @@ function make_animation()
         plot!(p, obs_xs, obs_ys, seriestype = :scatter,  marker = (:circle, 0.6, 8, :yellow))
     end
 
-    gif(anim, "acquisition.gif", fps = 1)
+    gif(anim, animation_name * ".gif", fps = 1)
 end
 
-make_animation()
+make_animation(dataset_name, animation_name)
