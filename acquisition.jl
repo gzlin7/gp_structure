@@ -55,12 +55,33 @@ function particle_filter(xs::Vector{Float64}, ys::Vector{Float64}, n_particles, 
     return state
 end
 
-# iterative
 function get_next_obs_x(state, new_xs, x_obs, y_obs)
-    k = 0.2
+    k = 2
     e_ucb = zeros(Float64, length(new_xs))
     weights = get_norm_weights(state)
 
+    # Continuous: use Optim to find next x
+    function get_e_ucb(x)
+        e_ucb1 = 0
+        for i=1:n_particles
+            trace = state.traces[i]
+            covariance_fn = get_retval(trace)[1]
+            noise = trace[:noise]
+            (conditional_mu, conditional_cov_matrix) = compute_predictive(
+                covariance_fn, noise, x_obs, y_obs, [x])
+
+            mu, var = conditional_mu[1], conditional_cov_matrix[1,1]
+            e_ucb1 += (mu + k * var) * weights[i]
+        end
+        # negative to return max, since minimization
+        return -e_ucb1
+    end
+
+    x_maximizer = Optim.minimizer(optimize(get_e_ucb,  0.0, 1.0))
+    println("maximizer = ", x_minimizer)
+    # return argmin(abs.(new_xs .- x_minimizer))
+
+    # discrete: iteratively find next x
     for i=1:n_particles
         trace = state.traces[i]
         covariance_fn = get_retval(trace)[1]
@@ -76,25 +97,7 @@ function get_next_obs_x(state, new_xs, x_obs, y_obs)
             e_ucb[j] += (mu + k * var) * weights[i]
         end
     end
-    return findmax(e_ucb)[2]
-
-    # function get_e_ucb(x)
-    #     e_ucb1 = 0
-    #     for i=1:n_particles
-    #         trace = state.traces[i]
-    #         covariance_fn = get_retval(trace)[1]
-    #         noise = trace[:noise]
-    #         (conditional_mu, conditional_cov_matrix) = compute_predictive(
-    #             covariance_fn, noise, x_obs, y_obs, x)
-    #
-    #         mu, var = conditional_mu[1], conditional_cov_matrix[1,1]
-    #         e_ucb1 += (mu + k * var) * weights[i]
-    #     end
-    #     return -e_ucb1
-    # end
-    #
-    # x0 = zeros(Float64, length(1))
-    # print(optimize(get_e_ucb, x0, LBFGS()))
+    return argmax(e_ucb)
 end
 
 # load and rescale the airline dataset
