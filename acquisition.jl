@@ -196,11 +196,11 @@ function make_animation()
                     push!(variances, sqrt(var)/mu)
                 end
                 pred_ys = mvnormal(conditional_mu, conditional_cov_matrix)
-                plot!(p,pred_xs,pred_ys, linealpha = weight*15, ribbon=variances, fillalpha=weight*1.5)
+                plot!(p,pred_xs,pred_ys, linecolor=:teal, linealpha = weight*5, ribbon=variances, fillcolor=:lightblue, fillalpha=weight)
             end
         end
         # plot!(p, inter_obs_x, inter_obs_y, ribbon=obs_variances,  fillalpha=0.3)
-        plot!(p, obs_xs, obs_ys, seriestype = :scatter,  marker = (:circle, 3, 0.6, :green, stroke(1, 1, :black, :dot)))
+        plot!(p, obs_xs, obs_ys, seriestype = :scatter,  marker = (:circle, 0.6, 8, :yellow))
     end
 
     gif(anim, "acquisition.gif", fps = 1)
