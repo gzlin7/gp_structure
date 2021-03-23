@@ -13,13 +13,13 @@ function particle_filter(xs::Vector{Float64}, ys::Vector{Float64}, n_particles, 
     # Iterate across timesteps
     for t=2:n_obs
         # # Resample and rejuvenate if the effective sample size is too low
-        if effective_sample_size(state) < 0.8 * n_particles
-            # Perform residual resampling, pruning low-weight particles
-            pf_resample!(state, :residual)
-            # Perform a rejuvenation move on past choices
-            pf_rejuvenate!(state, mh, (subtree_proposal, (), subtree_involution))
-            pf_rejuvenate!(state, mh, (noise_proposal, ()))
-        end
+        # if effective_sample_size(state) < 0.5 * n_particles
+        #     # Perform residual resampling, pruning low-weight particles
+        #     pf_resample!(state, :residual)
+        #     # Perform a rejuvenation move on past choices
+        #     pf_rejuvenate!(state, mh, (subtree_proposal, (), subtree_involution))
+        #     pf_rejuvenate!(state, mh, (noise_proposal, ()))
+        # end
         # Update filter state with new observation at timestep t
         pf_update!(state,(t,), (UnknownChange(),), obs_choices[t])
         if mod(t,10) == 0
@@ -32,6 +32,7 @@ end
 
 # load and rescale the airline dataset
 (xs, ys) = get_dataset("test_data")
+# (xs, ys) = get_airline_dataset()
 xs_train = xs[1:100]
 ys_train = ys[1:100]
 xs_test = xs[101:end]

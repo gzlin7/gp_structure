@@ -56,7 +56,7 @@ function particle_filter(xs::Vector{Float64}, ys::Vector{Float64}, n_particles, 
 end
 
 function get_next_obs_x(state, new_xs, x_obs, y_obs)
-    k = 2
+    k = 0.8
     e_ucb = zeros(Float64, length(new_xs))
     weights = get_norm_weights(state)
 
@@ -78,7 +78,7 @@ function get_next_obs_x(state, new_xs, x_obs, y_obs)
     end
 
     x_maximizer = Optim.minimizer(optimize(get_e_ucb,  0.0, 1.0))
-    println("maximizer = ", x_minimizer)
+    println("maximizer = ", x_maximizer)
     # return argmin(abs.(new_xs .- x_minimizer))
 
     # discrete: iteratively find next x
@@ -123,7 +123,6 @@ pf_callback = (state, xs, ys, anim_traj, t) -> begin
     if haskey(anim_traj, t) == false
         push!(anim_traj, t => [])
     end
-    println("===particle weights===")
     for i=1:n_particles
         trace = state.traces[i]
         covariance_fn = get_retval(trace)[1]
@@ -131,11 +130,9 @@ pf_callback = (state, xs, ys, anim_traj, t) -> begin
         push!(anim_traj[t], [covariance_fn, noise, weights[i]])
         mse =  compute_mse(covariance_fn, noise, xs_train, ys_train, xs_test, ys_test)
         pred_ll = predictive_ll(covariance_fn, noise, xs_train, ys_train, xs_test, ys_test)
-        print(weights[i])
         e_mse += mse * weights[i]
         e_pred_ll += pred_ll * weights[i]
     end
-    println("======")
     println("E[mse]: $e_mse, E[predictive log likelihood]: $e_pred_ll")
 end
 
@@ -192,7 +189,7 @@ function make_animation()
             # plot predictions for top 10 particles
             if i in best_idxes
                 (conditional_mu, conditional_cov_matrix) = compute_predictive(
-                    covariance_fn, noise, obs_xs, obs_ys, pred_xs)
+                    covariance_fn, 0.001, obs_xs, obs_ys, pred_xs)
                 variances = []
                 for j=1:length(pred_xs)
                     mu, var = conditional_mu[j], conditional_cov_matrix[j,j]
