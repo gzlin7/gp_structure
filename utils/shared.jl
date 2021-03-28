@@ -14,7 +14,7 @@ using Statistics: mean
 #########################
 
 function get_airline_dataset()
-    df = CSV.File("$(@__DIR__)/airline.csv", header=["time", "price"])
+    df = CSV.File("$(@__DIR__)/../datasets/airline.csv", header=["time", "price"])
     xs = Vector{Float64}(df.time)
     ys = Vector{Float64}(df.price)
     xs .-= minimum(xs) # set x minimum to 0.
@@ -25,7 +25,7 @@ function get_airline_dataset()
 end
 
 function get_dataset(name)
-    df = CSV.File("$(@__DIR__)/" * name * ".csv")
+    df = CSV.File("$(@__DIR__)/../datasets/" * name * ".csv")
     xs = Vector{Float64}(df.X)
     ys = Vector{Float64}(df.Y)
     xs .-= minimum(xs) # set x minimum to 0.
