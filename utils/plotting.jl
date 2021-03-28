@@ -1,5 +1,8 @@
+using Plots
+gr()
+Plots.GRBackend()
 
-function make_animation_sequential(animation_name, animation_traj)
+function make_animation_sequential(animation_name, anim_traj, xs_train, ys_train, xs, ys)
     sorted_obs = []
     for obs in keys(anim_traj)
         push!(sorted_obs, obs)
@@ -20,7 +23,16 @@ function make_animation_sequential(animation_name, animation_traj)
         end
 
         # plot observations
-        p = plot(obs_xs, obs_ys, title="$obs Observations, $n_particles Particles ", ylim=(-2, 3), legend=false, linecolor=:red)
+        p = plot(xs_train, ys_train, title="$obs Observations, $n_particles Particles ", ylim=(-2, 3), legend=false, linecolor=:red)
+
+        # get indices of the top n particles
+        weights = [vals[i][3] for i=1:length(vals)]
+        best_idxes = []
+        for p=1:5
+            max_weight_idx = findmax(weights)[2]
+            push!(best_idxes, max_weight_idx)
+            weights[max_weight_idx] = 0
+        end
 
         # plot predictions
         for i=1:length(vals)
@@ -34,17 +46,17 @@ function make_animation_sequential(animation_name, animation_traj)
                 mu, var = obs_conditional_mu[j], obs_conditional_cov_matrix[j,j]
                 obs_variances[j] += sqrt(var)/mu * weight
             end
-            # plot predictions for every 5th particle
-            if mod(i,5) ==0
+            # plot predictions for top particles
+            if i in best_idxes
                 (conditional_mu, conditional_cov_matrix) = compute_predictive(
-                    covariance_fn, noise, obs_xs, obs_ys, pred_xs)
+                    covariance_fn, 0.001, obs_xs, obs_ys, pred_xs)
                 variances = []
                 for j=1:length(pred_xs)
                     mu, var = conditional_mu[j], conditional_cov_matrix[j,j]
                     push!(variances, sqrt(var)/mu)
                 end
                 pred_ys = mvnormal(conditional_mu, conditional_cov_matrix)
-                plot!(p,pred_xs,pred_ys, linealpha = weight*10, ribbon=variances, fillalpha=weight*2)
+                plot!(p,pred_xs,pred_ys, linealpha = weight*10, ribbon=variances, fillalpha=weight*2, linecolor=:teal, fillcolor=:lightblue)
             end
         end
         plot!(p, inter_obs_x, inter_obs_y, ribbon=obs_variances,  fillalpha=0.3)
@@ -55,7 +67,7 @@ function make_animation_sequential(animation_name, animation_traj)
 end
 
 
-function make_animation_acquisition(animation_name, animation_traj)
+function make_animation_acquisition(animation_name, anim_traj, xs_train, ys_train, xs, ys, x_obs_traj, y_obs_traj)
     sorted_obs = []
     for obs in keys(anim_traj)
         push!(sorted_obs, obs)
@@ -82,7 +94,7 @@ function make_animation_acquisition(animation_name, animation_traj)
         # get indices of the top n particles
         weights = [vals[i][3] for i=1:length(vals)]
         best_idxes = []
-        for p=1:10
+        for p=1:5
             max_weight_idx = findmax(weights)[2]
             push!(best_idxes, max_weight_idx)
             weights[max_weight_idx] = 0
@@ -100,7 +112,7 @@ function make_animation_acquisition(animation_name, animation_traj)
                 mu, var = obs_conditional_mu[j], obs_conditional_cov_matrix[j,j]
                 obs_variances[j] += sqrt(var)/mu * weight
             end
-            # plot predictions for top 10 particles
+            # plot predictions for top particles
             if i in best_idxes
                 (conditional_mu, conditional_cov_matrix) = compute_predictive(
                     covariance_fn, 0.001, obs_xs, obs_ys, pred_xs)
@@ -110,7 +122,7 @@ function make_animation_acquisition(animation_name, animation_traj)
                     push!(variances, sqrt(var)/mu)
                 end
                 pred_ys = mvnormal(conditional_mu, conditional_cov_matrix)
-                plot!(p,pred_xs,pred_ys, linecolor=:teal, linealpha = weight*5, ribbon=variances, fillcolor=:lightblue, fillalpha=weight)
+                plot!(p,pred_xs,pred_ys, linecolor=:teal, linealpha = weight*5, ribbon=variances, fillcolor=:lightblue, fillalpha=weight*2)
             end
         end
         # plot!(p, inter_obs_x, inter_obs_y, ribbon=obs_variances,  fillalpha=0.3)

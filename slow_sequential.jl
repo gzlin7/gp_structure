@@ -1,13 +1,10 @@
 include("utils/shared.jl")
 include("utils/plotting.jl")
 using GenParticleFilters
-using Plots
-gr()
-Plots.GRBackend()
 
 dataset_name = "cubic"
-animation_name = "sequential_slow_" * dataset_name
-n_particles = 100
+animation_name = "slow_sequential" * dataset_name
+n_particles = 50
 
 @gen function model(xs::Vector{Float64})
     n = length(xs)
@@ -44,7 +41,7 @@ n_particles = 100
     return (covariance_fn, ys)
 end
 
-function particle_filter(xs::Vector{Float64}, ys::Vector{Float64}, n_particles, callback, anim_traj)
+function particle_filter(xs::Vector{Float64}, ys::Vector{Float64}, n_particles, callback, anim_traj, xs_test, ys_test)
     n_obs = length(xs)
     obs_choices = [choicemap(((:y, t), ys[t])) for t=1:n_obs]
     state = pf_initialize(model, ([xs[1]],), obs_choices[1], n_particles)
@@ -68,7 +65,7 @@ function particle_filter(xs::Vector{Float64}, ys::Vector{Float64}, n_particles, 
     return state
 end
 
-pf_callback = (state, xs, ys, anim_traj, t) -> begin
+pf_callback = (state, xs, ys, xs_test, ys_test, anim_traj, t) -> begin
     # calculate E[MSE]
     n_particles = length(state.traces)
     e_mse = 0
@@ -106,4 +103,4 @@ Random.seed!(1)
 # do inference, time it
 @time state = particle_filter(xs_train, ys_train, n_particles, pf_callback, anim_traj)
 
-make_animation_sequential(animation_name, anim_traj)
+make_animation_sequential(animation_name, anim_traj, xs_train, ys_train)

@@ -8,11 +8,7 @@ gr()
 Plots.GRBackend()
 @load_generated_functions()
 
-dataset_name = "cubic"
-animation_name = "acquisition_" * dataset_name
-n_particles = 50
-
-function particle_filter(xs::Vector{Float64}, ys::Vector{Float64}, n_particles, callback, anim_traj, x_obs_traj, y_obs_traj)
+function particle_filter_acquisition(xs::Vector{Float64}, ys::Vector{Float64}, n_particles, callback, anim_traj, x_obs_traj, y_obs_traj)
     # n_obs = length(xs)
     n_obs = 50
     obs_idx = [1]
@@ -104,44 +100,3 @@ function get_next_obs_x(state, new_xs, x_obs, y_obs)
     end
     return argmax(e_ucb)
 end
-
-# load the dataset
-(xs, ys) = get_dataset(dataset_name)
-xs_train = xs[1:100]
-ys_train = ys[1:100]
-xs_test = xs[101:end]
-ys_test = ys[101:end]
-
-# visualization
-anim_traj = Dict()
-
-# set seed
-Random.seed!(1)
-
-pf_callback = (state, xs, ys, anim_traj, t) -> begin
-    # calculate E[MSE]
-    n_particles = length(state.traces)
-    e_mse = 0
-    e_pred_ll = 0
-    weights = get_norm_weights(state)
-    if haskey(anim_traj, t) == false
-        push!(anim_traj, t => [])
-    end
-    for i=1:n_particles
-        trace = state.traces[i]
-        covariance_fn = get_retval(trace)[1]
-        noise = trace[:noise]
-        push!(anim_traj[t], [covariance_fn, noise, weights[i]])
-        mse =  compute_mse(covariance_fn, noise, xs_train, ys_train, xs_test, ys_test)
-        pred_ll = predictive_ll(covariance_fn, noise, xs_train, ys_train, xs_test, ys_test)
-        e_mse += mse * weights[i]
-        e_pred_ll += pred_ll * weights[i]
-    end
-    println("E[mse]: $e_mse, E[predictive log likelihood]: $e_pred_ll")
-end
-
-x_obs_traj = Float64[]
-y_obs_traj = Float64[]
-state = particle_filter(xs_train, ys_train, n_particles, pf_callback, anim_traj, x_obs_traj, y_obs_traj)
-
-make_animation_acquisition(animation_name, anim_traj)
