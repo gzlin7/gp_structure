@@ -2,7 +2,7 @@ include("sequential.jl")
 # include("acquisition.jl")
 include("acquisition_exploration.jl")
 
-function run_inference(dataset_name, animation_name, n_particles)
+function run_inference(dataset_name, animation_name, n_particles, sequential)
     # load the dataset
     (xs, ys) = get_dataset(dataset_name)
     # (xs, ys) = get_airline_dataset()
@@ -41,17 +41,17 @@ function run_inference(dataset_name, animation_name, n_particles)
     # do inference and plot visualization
     if (sequential)
         @time state = particle_filter_sequential(xs_train, ys_train, n_particles, pf_callback, anim_traj)
-        make_animation_sequential(animation_name, anim_traj, xs_train, ys_train, xs, ys)
+        make_animation_sequential(animation_name, anim_traj, n_particles, xs_train, ys_train, xs, ys)
     else
         x_obs_traj = Float64[]
         y_obs_traj = Float64[]
         @time state = particle_filter_acquisition(xs_train, ys_train, n_particles, pf_callback, anim_traj, x_obs_traj, y_obs_traj)
-        make_animation_acquisition(animation_name, anim_traj, xs_train, ys_train, xs, ys, x_obs_traj, y_obs_traj)
+        make_animation_acquisition(animation_name, anim_traj, n_particles, xs_train, ys_train, xs, ys, x_obs_traj, y_obs_traj)
     end
 end
 
 # dataset_names = ["airline"]
-dataset_names = ["changepoint", "polynomial", "quadratic", "cubic"]
+dataset_names = ["quadratic", "cubic", "changepoint", "polynomial"]
 
 for i=1:length(dataset_names)
     dataset_name = dataset_names[i]
@@ -60,12 +60,12 @@ for i=1:length(dataset_names)
     n_particles = 100
     sequential = true
     animation_name = "sequential_" * dataset_name
-    run_inference(dataset_name, animation_name, n_particles)
+    run_inference(dataset_name, animation_name, n_particles, sequential)
 
     # run acquisition prediction
-    n_particles = 100
-    sequential = false
-    animation_name = "acq_exp_" * dataset_name
-    # animation_name = "acquisition_" * dataset_name
-    run_inference(dataset_name, animation_name, n_particles)
+    # n_particles = 100
+    # sequential = false
+    # animation_name = "acq_exp_" * dataset_name
+    # # animation_name = "acquisition_" * dataset_name
+    # run_inference(dataset_name, animation_name, n_particles, sequential)
 end
