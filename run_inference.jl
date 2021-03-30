@@ -1,5 +1,6 @@
 include("sequential.jl")
-include("acquisition.jl")
+# include("acquisition.jl")
+include("acquisition_exploration.jl")
 
 function run_inference(dataset_name, animation_name, n_particles)
     # load the dataset
@@ -49,20 +50,22 @@ function run_inference(dataset_name, animation_name, n_particles)
     end
 end
 
-dataset_names = ["quadratic", "cubic"]
+# dataset_names = ["airline"]
+dataset_names = ["changepoint", "polynomial", "quadratic", "cubic"]
 
 for i=1:length(dataset_names)
     dataset_name = dataset_names[i]
 
-    # run sequential prediction
+    # # run sequential prediction
     n_particles = 100
     sequential = true
     animation_name = "sequential_" * dataset_name
     run_inference(dataset_name, animation_name, n_particles)
 
-    # # run acquisition prediction
-    # n_particles = 50
-    # sequential = false
+    # run acquisition prediction
+    n_particles = 100
+    sequential = false
+    animation_name = "acq_exp_" * dataset_name
     # animation_name = "acquisition_" * dataset_name
-    # run_inference(dataset_name, animation_name, n_particles)
+    run_inference(dataset_name, animation_name, n_particles)
 end

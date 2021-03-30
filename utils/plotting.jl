@@ -56,7 +56,7 @@ function make_animation_sequential(animation_name, anim_traj, xs_train, ys_train
                     push!(variances, sqrt(var)/mu)
                 end
                 pred_ys = mvnormal(conditional_mu, conditional_cov_matrix)
-                plot!(p,pred_xs,pred_ys, linealpha = weight*10, ribbon=variances, fillalpha=weight*2, linecolor=:teal, fillcolor=:lightblue)
+                plot!(p,pred_xs,pred_ys, linealpha = max(0.25, weight*10), ribbon=variances, fillalpha=weight*2, linecolor=:teal, fillcolor=:lightblue)
             end
         end
         plot!(p, inter_obs_x, inter_obs_y, ribbon=obs_variances,  fillalpha=0.3)
@@ -122,7 +122,7 @@ function make_animation_acquisition(animation_name, anim_traj, xs_train, ys_trai
                     push!(variances, sqrt(var)/mu)
                 end
                 pred_ys = mvnormal(conditional_mu, conditional_cov_matrix)
-                plot!(p,pred_xs,pred_ys, linecolor=:teal, linealpha = weight*5, ribbon=variances, fillcolor=:lightblue, fillalpha=weight*2)
+                plot!(p,pred_xs,pred_ys, linecolor=:teal, linealpha = max(0.25, weight*10), ribbon=variances, fillcolor=:lightblue, fillalpha=weight*2)
             end
         end
         # plot!(p, inter_obs_x, inter_obs_y, ribbon=obs_variances,  fillalpha=0.3)
