@@ -4,8 +4,11 @@ include("acquisition_exploration.jl")
 
 function run_inference(dataset_name, animation_name, n_particles, sequential)
     # load the dataset
-    (xs, ys) = get_dataset(dataset_name)
-    # (xs, ys) = get_airline_dataset()
+    if (dataset_name == "airline")
+        (xs, ys) = get_airline_dataset()
+    else
+        (xs, ys) = get_dataset(dataset_name)
+    end
     xs_train = xs[1:100]
     ys_train = ys[1:100]
     xs_test = xs[101:end]
@@ -50,22 +53,22 @@ function run_inference(dataset_name, animation_name, n_particles, sequential)
     end
 end
 
-# dataset_names = ["airline"]
-dataset_names = ["quadratic", "cubic", "changepoint", "polynomial"]
+dataset_names = ["airline"]
+# dataset_names = ["quadratic", "cubic", "changepoint", "polynomial"]
 
 for i=1:length(dataset_names)
     dataset_name = dataset_names[i]
 
     # # run sequential prediction
-    n_particles = 100
-    sequential = true
-    animation_name = "sequential_" * dataset_name
-    run_inference(dataset_name, animation_name, n_particles, sequential)
+    # n_particles = 100
+    # sequential = true
+    # animation_name = "sequential_" * dataset_name
+    # run_inference(dataset_name, animation_name, n_particles, sequential)
 
     # run acquisition prediction
-    # n_particles = 100
-    # sequential = false
-    # animation_name = "acq_exp_" * dataset_name
-    # # animation_name = "acquisition_" * dataset_name
-    # run_inference(dataset_name, animation_name, n_particles, sequential)
+    n_particles = 100
+    sequential = false
+    animation_name = "acq_exp_" * dataset_name
+    # animation_name = "acquisition_" * dataset_name
+    run_inference(dataset_name, animation_name, n_particles, sequential)
 end
