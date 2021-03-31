@@ -53,8 +53,8 @@ function run_inference(dataset_name, animation_name, n_particles, sequential)
     end
 end
 
-dataset_names = ["airline"]
-# dataset_names = ["quadratic", "cubic", "changepoint", "polynomial"]
+# dataset_names = ["airline"]
+dataset_names = ["quadratic", "cubic", "changepoint", "polynomial"]
 
 for i=1:length(dataset_names)
     dataset_name = dataset_names[i]

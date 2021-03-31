@@ -117,8 +117,8 @@ function make_animation_acquisition(animation_name, anim_traj, n_particles, xs_t
 
             for j=1:length(e_ucb_xs)
                 mu, var = conditional_mu[j], conditional_cov_matrix[j,j]
-                e_ucb_vars[j] += (mu + k * var) * weights[i]
-                e_ucb_mus[j] = mu
+                e_ucb_vars[j] += (k * var) * weights[i]
+                e_ucb_mus[j] += mu * weights[i]
             end
         end
         plot!(p, e_ucb_xs, e_ucb_mus, yerror=e_ucb_vars, alpha=0.5)
