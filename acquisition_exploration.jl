@@ -19,6 +19,10 @@ function particle_filter_acquisition(xs::Vector{Float64}, ys::Vector{Float64}, n
 
     state = pf_initialize(model, (1,), obs_choices[1], n_particles)
 
+    push!(x_obs_traj, xs[1])
+    push!(y_obs_traj, ys[1])
+
+
     # Iterate across timesteps
     for t=2:n_obs-1
         # Resample and rejuvenate if the effective sample size is too low
@@ -49,11 +53,11 @@ function particle_filter_acquisition(xs::Vector{Float64}, ys::Vector{Float64}, n
         pf_update!(state, (t,), (UnknownChange(),), obs_choices[t])
         push!(x_obs_traj, xs[next_obs_idx])
         push!(y_obs_traj, ys[next_obs_idx])
-        if mod(t,2) == 0
+        if mod(t,5) == 0
             println(obs_idx)
             println("number of observations: $t")
-            callback(state, xs, ys, anim_traj, t)
         end
+        callback(state, xs, ys, anim_traj, t)
     end
     return state
 end

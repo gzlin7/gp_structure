@@ -122,8 +122,16 @@ function make_animation_acquisition(animation_name, anim_traj, n_particles, xs_t
             end
         end
         plot!(p, e_ucb_xs, e_ucb_mus, yerror=e_ucb_vars, alpha=0.5)
+
+        # plot max UCB in diff color
+        max_ucb = argmax(e_ucb_mus + e_ucb_vars)
+        max_ucb_x = convert(Array{Float64}, [e_ucb_xs[max_ucb]])
+        max_ucb_mu = convert(Array{Float64}, [e_ucb_mus[max_ucb]])
+        max_ucb_var = convert(Array{Float64}, [e_ucb_vars[max_ucb]])
+        plot!(p, max_ucb_x, max_ucb_mu, yerror=max_ucb_var, alpha=1, color=:red)
+
         old_obs = length(obs_xs) - 2
-        plot!(p, obs_xs[1 : old_obs], obs_ys[1 : old_obs], seriestype = :scatter,  marker = (:circle, 0.4, 4, :black))
+        plot!(p, obs_xs[1 : old_obs], obs_ys[1 : old_obs], seriestype = :scatter,  marker = (:circle, 0.4, 6, :black))
         plot!(p, obs_xs[old_obs+1 : length(obs_xs)], obs_ys[old_obs+1 : length(obs_xs)], seriestype = :scatter,  marker = (:circle, 0.8, 8, :yellow))
     end
 
