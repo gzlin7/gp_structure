@@ -94,7 +94,7 @@ end
 
     # randomly sample x
     x ~ uniform(0,1000)
-    push!(xs, x)
+    xs = [xs; x]
     var = eval_cov(covariance_fn, x, x) + noise
 
     i = t
@@ -104,7 +104,7 @@ end
         cov_matrix = reshape([var], 1, 1)
     end
     if i > 1
-        xs = xs[1:i]
+        # xs = xs[1:i]
         cov_matrix = cov_matrix_incremental(cov_matrix, covariance_fn, xs, var)
         covm_11 = cov_matrix[i,i]
         covm_21 = cov_matrix[1:i-1,i]

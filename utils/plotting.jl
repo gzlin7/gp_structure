@@ -3,11 +3,12 @@ gr()
 Plots.GRBackend()
 
 function get_n_top_weight_idxs(n, weights)
+    w = deepcopy(weights)
     best_idxes = []
-    for p=1:5
-        max_weight_idx = findmax(weights)[2]
+    for p=1:n
+        max_weight_idx = findmax(w)[2]
         push!(best_idxes, max_weight_idx)
-        weights[max_weight_idx] = 0
+        w[max_weight_idx] = 0
     end
     return best_idxes
 end
@@ -22,8 +23,8 @@ function plot_gp(plot, covariance_fn, weight, obs_xs, obs_ys, pred_xs)
         push!(variances, sqrt(var))
     end
     pred_ys = mvnormal(conditional_mu, conditional_cov_matrix)
-    plot!(plot,pred_xs,pred_ys, linealpha = max(0.3, weight*10), linecolor=:teal,
-    ribbon=variances, fillalpha=max(0.2, weight*8), fillcolor=:lightblue)
+    plot!(plot,pred_xs,pred_ys, linealpha = weight*10, linecolor=:teal,
+    ribbon=variances, fillalpha=weight*8, fillcolor=:lightblue)
 end
 
 function plot_obs_variance(plot, covariance_fn, weight, obs_xs, obs_ys)
@@ -102,13 +103,16 @@ function make_animation_acquisition(animation_name, anim_traj, n_particles, xs_t
         best_idxes = get_n_top_weight_idxs(n, weights)
 
         # plot predictions
+        # println("best_idxes", best_idxes)
         for i=1:length(vals)
             covariance_fn = vals[i][1]
             noise = vals[i][2]
             weight = vals[i][3]
             # plot predictions for top particles
             if i in best_idxes
-                plot_gp(p, covariance_fn, noise, weight, obs_xs, obs_ys, pred_xs)
+                # print("idx ", i)
+                # print("weight ", weight)
+                plot_gp(p, covariance_fn, weight, obs_xs, obs_ys, pred_xs)
                 # plot_obs_variance(p, covariance_fn, weight, obs_xs, obs_ys)
             end
             # add E[UCB] * weight
