@@ -23,8 +23,12 @@ function changepoint(x)
     end
 end
 
-filename = "changepoint"
-f = changepoint
+function sinusoid(x)
+    return sin(4x)
+end
+
+filename = "sinusoid"
+f = sinusoid
 n_train = 100
 n_test = 100
 noise_mu = 0
