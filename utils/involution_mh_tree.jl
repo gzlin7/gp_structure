@@ -1,6 +1,6 @@
 using Gen
 
-include("../gp_structure/shared.jl")
+include("shared.jl")
 
 @gen function covariance_prior()
     node_type = @trace(categorical(node_dist), :type)

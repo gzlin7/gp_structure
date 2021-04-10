@@ -148,6 +148,28 @@ get_conditional_ys = Unfold(calc_conditional_dist)
     return (covariance_fn, ys)
 end
 
+function pf_callback(state, xs_train, ys_train, anim_traj, t)
+    # calculate E[MSE]
+    n_particles = length(state.traces)
+    e_mse = 0
+    e_pred_ll = 0
+    weights = get_norm_weights(state)
+    if haskey(anim_traj, t) == false
+        push!(anim_traj, t => [])
+    end
+    for i=1:n_particles
+        trace = state.traces[i]
+        covariance_fn = get_retval(trace)[1]
+        noise = trace[:noise]
+        push!(anim_traj[t], [covariance_fn, noise, weights[i]])
+        mse =  compute_mse(covariance_fn, noise, xs_train, ys_train, xs_test, ys_test)
+        pred_ll = predictive_ll(covariance_fn, noise, xs_train, ys_train, xs_test, ys_test)
+        e_mse += mse * weights[i]
+        e_pred_ll += pred_ll * weights[i]
+    end
+    println("E[mse]: $e_mse, E[predictive log likelihood]: $e_pred_ll")
+end
+
 @gen function noise_proposal(prev_trace)
     @trace(gamma(1, 1), :noise)
 end

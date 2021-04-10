@@ -106,6 +106,7 @@ function make_animation_acquisition(animation_name, anim_traj, n_particles, xs_t
         # println("best_idxes", best_idxes)
         for i=1:length(vals)
             covariance_fn = vals[i][1]
+            println(covariance_fn)
             noise = vals[i][2]
             weight = vals[i][3]
             # plot predictions for top particles

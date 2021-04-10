@@ -1,20 +1,24 @@
-include("sequential.jl")
-include("acquisition_exploration.jl")
+include("slow_sequential.jl")
+# include("acquisition_exploration.jl")
 include("utils/shared.jl")
 
 function generate_first_layer(n_buckets)
-    cov_fns = []
+    cov_fns = Dict(Constant => [], Linear => [], SquaredExponential => [], Periodic => [])
     for param1 in LinRange(1/n_buckets,1.0,n_buckets)
         # Constant, Linear, SE
         for kern1 in [Linear, Constant, SquaredExponential]
-            push!(cov_fns, kern1(param1))
+            push!(cov_fns[kern1], kern1(param1))
         end
         # Periodic- tune second parameter
         for param2 in LinRange(1/n_buckets,1.0,n_buckets)
-            push!(cov_fns, Periodic(param1,param2))
+            push!(cov_fns[Periodic],  Periodic(param1,param2))
         end
     end
-    return cov_fns
+    sorted_cov_fns = []
+    for (key, value) in cov_fns
+        sorted_cov_fns = [sorted_cov_fns; value]
+    end
+    return sorted_cov_fns
 end
 
 function add_tree_layer(cov_grid)
@@ -55,7 +59,7 @@ function node_to_choicemap(node, map, depth)
     end
 end
 
-function get_grid_choicemaps(tree_depth, n_buckets)
+function get_cov_grid(tree_depth, n_buckets)
     cov_grid = generate_first_layer(n_buckets)
     prev_grid = cov_grid
     for n=2:tree_depth
@@ -63,14 +67,15 @@ function get_grid_choicemaps(tree_depth, n_buckets)
         prev_grid = new_layer
         cov_grid = [cov_grid; new_layer]
     end
+    return cov_grid
     # convert to choicemaps
-    return [node_to_choicemap(cov_grid[t], choicemap(), 1) for t=1:length(cov_grid)]
+    # return [node_to_choicemap(cov_grid[t], choicemap(), 1) for t=1:length(cov_grid)]
 end
 
-cov_grid = get_grid_choicemaps(2,5)
+cov_grid = get_cov_grid(1,5)
 println(length(cov_grid))
-println(display(cov_grid[100]))
-println(display(to_array(cov_grid[100])))
+# println(display(cov_grid[5]))
+# println(display(get_values_shallow(cov_grid[100])))
 
 
 function run_inference(dataset_name, animation_name, n_particles, sequential, cov_fn)
@@ -81,30 +86,48 @@ function run_inference(dataset_name, animation_name, n_particles, sequential, co
 
     # do inference and plot visualization
     if (sequential)
-        @time state = particle_filter_sequential(xs_train, ys_train, n_particles, pf_callback, anim_traj, xs_test, ys_test, cov_fn)
-        make_animation_sequential(animation_name, anim_traj, n_particles, xs_train, ys_train, xs, ys)
-    else
-        x_obs_traj = Float64[]
-        y_obs_traj = Float64[]
+        # @time state = particle_filter_sequential(xs_train, ys_train, n_particles, pf_callback, anim_traj, xs_test, ys_test, cov_fn)
+        # make_animation_sequential(animation_name, anim_traj, n_particles, xs_train, ys_train, xs, ys)
+        # println(([((:y, t), ys_train[t]) for t=1:length(xs_train)]))
+        obs_choices = choicemap()
+        for t=1:length(ys_train)
+            obs_choices[(:y, t)] = ys_train[t]
+        end
+        cov_fn_map = node_to_choicemap(cov_fn, choicemap(), 1)
+        trace, weight = generate(model, Tuple([xs_train]), merge(obs_choices, cov_fn_map))
+        # display(get_choices(trace))
+        print(cov_fn)
+        println("    weight ", weight)
+    # else
+    #     x_obs_traj = Float64[]
+    #     y_obs_traj = Float64[]
         # @time state = particle_filter_acquisition(xs_train, ys_train, n_particles, pf_callback, anim_traj, x_obs_traj, y_obs_traj)
-        make_animation_acquisition(animation_name, anim_traj, n_particles, xs_train, ys_train, xs, ys, x_obs_traj, y_obs_traj)
+        # make_animation_acquisition(animation_name, anim_traj, n_particles, xs_train, ys_train, xs, ys, x_obs_traj, y_obs_traj)
     end
 end
 
 
 # dataset_names = ["airline"]
 # dataset_names = ["quadratic", "changepoint", "polynomial"]
-dataset_names = ["sinusoid"]
+dataset_name = "sinusoid"
+if (dataset_name == "airline")
+    (xs, ys) = get_airline_dataset()
+else
+    (xs, ys) = get_dataset(dataset_name)
+end
+xs_train = xs[1:100]
+ys_train = ys[1:100]
+xs_test = xs[101:end]
+ys_test = ys[101:end]
 
-
-for i=1:length(dataset_names)
-    dataset_name = dataset_names[i]
+for i=1:length(cov_grid)
+    cov_fn = cov_grid[i]
 
     # # run sequential prediction
-    n_particles = 100
+    n_particles = 1
     sequential = true
     animation_name = "sequential_" * dataset_name
-    run_inference(dataset_name, animation_name, n_particles, sequential)
+    run_inference(dataset_name, animation_name, n_particles, sequential, cov_fn)
 
     # run acquisition prediction
     # n_particles = 1
