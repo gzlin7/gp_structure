@@ -28,10 +28,10 @@ function get_dataset(name)
     df = CSV.File("$(@__DIR__)/../datasets/" * name * ".csv")
     xs = Vector{Float64}(df.X)
     ys = Vector{Float64}(df.Y)
-    xs .-= minimum(xs) # set x minimum to 0.
-    xs /= maximum(xs) # scale x so that maximum is at 1.
-    ys .-= mean(ys) # set y mean to 0.
-    ys *= 4 / (maximum(ys) - minimum(ys)) # make it fit in the window [-2, 2]
+    # xs .-= minimum(xs) # set x minimum to 0.
+    # xs /= maximum(xs) # scale x so that maximum is at 1.
+    # ys .-= mean(ys) # set y mean to 0.
+    # ys *= 4 / (maximum(ys) - minimum(ys)) # make it fit in the window [-2, 2]
     return (xs, ys)
 end
 

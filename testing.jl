@@ -1,84 +1,11 @@
 include("slow_sequential.jl")
 # include("acquisition_exploration.jl")
-include("utils/shared.jl")
-
-function generate_first_layer(n_buckets)
-    cov_fns = Dict(Constant => [], Linear => [], SquaredExponential => [], Periodic => [])
-    for param1 in LinRange(1/n_buckets,1.0,n_buckets)
-        # Constant, Linear, SE
-        for kern1 in [Linear, Constant, SquaredExponential]
-            push!(cov_fns[kern1], kern1(param1))
-        end
-        # Periodic- tune second parameter
-        for param2 in LinRange(1/n_buckets,1.0,n_buckets)
-            push!(cov_fns[Periodic],  Periodic(param1,param2))
-        end
-    end
-    sorted_cov_fns = []
-    for (key, value) in cov_fns
-        sorted_cov_fns = [sorted_cov_fns; value]
-    end
-    return sorted_cov_fns
-end
-
-function add_tree_layer(cov_grid)
-    new_cov_fns = []
-    for i=1:length(cov_grid)-1
-        for j=i+1:length(cov_grid)
-            for operator in [Plus, Times]
-                push!(new_cov_fns, operator(cov_grid[i], cov_grid[j]))
-            end
-        end
-    end
-    return new_cov_fns
-end
-
-# only works up to depth 2 trees for now
-# TODO: fix for depth > 2
-node_types = [Constant, Linear, SquaredExponential, Periodic, Plus, Times]
-function node_to_choicemap(node, map, depth)
-    type = findfirst(x->x==typeof(node), node_types)
-    map[(depth, :type)] = type
-    # Plus, Times (recurse)
-    if type in [5,6]
-        map = node_to_choicemap(node.left, map, depth+1)
-        return node_to_choicemap(node.right, map, depth+2)
-    else
-        # Constant, Linear
-        if type in [1,2]
-            map[(depth, :param)] = node.param
-        # Squared Exponential
-        elseif type == 3
-            map[(depth, :param)] = node.length_scale
-        # Periodic
-        elseif type == 4
-            map[(depth, :scale)] = node.scale
-            map[(depth, :period)] = node.period
-        end
-        tree_choicemap = choicemap()
-        set_submap!(tree_choicemap, :tree, map)
-        return tree_choicemap
-    end
-end
-
-function get_cov_grid(tree_depth, n_buckets)
-    cov_grid = generate_first_layer(n_buckets)
-    prev_grid = cov_grid
-    for n=2:tree_depth
-        new_layer = add_tree_layer(prev_grid)
-        prev_grid = new_layer
-        cov_grid = [cov_grid; new_layer]
-    end
-    return cov_grid
-    # convert to choicemaps
-    # return [node_to_choicemap(cov_grid[t], choicemap(), 1) for t=1:length(cov_grid)]
-end
+include("testing_utilities.jl")
 
 cov_grid = get_cov_grid(1,5)
 println(length(cov_grid))
 # println(display(cov_grid[5]))
 # println(display(get_values_shallow(cov_grid[100])))
-
 
 function run_inference(dataset_name, animation_name, n_particles, sequential, cov_fn)
     anim_traj = Dict()
@@ -98,15 +25,17 @@ function run_inference(dataset_name, animation_name, n_particles, sequential, co
         # display(merge(obs_choices, cov_fn_map))
         # println(merge(obs_choices, cov_fn_map))
         trace, weight = generate(model, Tuple([xs_train]), merge(obs_choices, cov_fn_map))
+        likelihood = project(trace, select([(:y, i) for i=1:length(ys_train)]...))
         # display(get_choices(trace))
-        print(cov_fn)
-        println("    likelihood ", project(trace, select([(:y, i) => ys_train[i] for i=1:length(ys_train)])))
+        # print(cov_fn)
+        # println("    likelihood ", likelihood)
     # else
     #     x_obs_traj = Float64[]
     #     y_obs_traj = Float64[]
         # @time state = particle_filter_acquisition(xs_train, ys_train, n_particles, pf_callback, anim_traj, x_obs_traj, y_obs_traj)
         # make_animation_acquisition(animation_name, anim_traj, n_particles, xs_train, ys_train, xs, ys, x_obs_traj, y_obs_traj)
     end
+    return (cov_fn, likelihood)
 end
 
 
@@ -123,6 +52,8 @@ ys_train = ys[1:100]
 xs_test = xs[101:end]
 ys_test = ys[101:end]
 
+results = []
+
 for i=1:length(cov_grid)
     cov_fn = cov_grid[i]
 
@@ -130,7 +61,8 @@ for i=1:length(cov_grid)
     n_particles = 1
     sequential = true
     animation_name = "sequential_" * dataset_name
-    run_inference(dataset_name, animation_name, n_particles, sequential, cov_fn)
+    ret_likelihood = run_inference(dataset_name, animation_name, n_particles, sequential, cov_fn)
+    push!(results, ret_likelihood)
 
     # run acquisition prediction
     # n_particles = 1
@@ -139,3 +71,12 @@ for i=1:length(cov_grid)
     # # animation_name = "acquisition_" * dataset_name
     # run_inference(dataset_name, animation_name, n_particles, sequential)
 end
+
+# sort by likelihood
+sort!(results, by = x -> x[2], rev = true);
+for ret in results
+    print(ret[1])
+    println("    likelihood ", ret[2])
+end
+animation_name = "testing_" * dataset_name
+make_animation_likelihood(animation_name, results, xs_train, ys_train)

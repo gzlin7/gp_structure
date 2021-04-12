@@ -1,5 +1,6 @@
 include("utils/shared.jl")
 include("utils/plotting.jl")
+include("utils/subtree.jl")
 using GenParticleFilters
 
 dataset_name = "cubic"

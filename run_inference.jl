@@ -62,15 +62,15 @@ for i=1:length(dataset_names)
     dataset_name = dataset_names[i]
 
     # # run sequential prediction
-    # n_particles = 100
-    # sequential = true
-    # animation_name = "sequential_" * dataset_name
-    # run_inference(dataset_name, animation_name, n_particles, sequential)
+    n_particles = 100
+    sequential = true
+    animation_name = "sequential_" * dataset_name
+    run_inference(dataset_name, animation_name, n_particles, sequential)
 
     # run acquisition prediction
-    n_particles = 100
-    sequential = false
-    animation_name = "acq_exp_" * dataset_name
-    # animation_name = "acquisition_" * dataset_name
-    run_inference(dataset_name, animation_name, n_particles, sequential)
+    # n_particles = 100
+    # sequential = false
+    # animation_name = "acq_exp_" * dataset_name
+    # # animation_name = "acquisition_" * dataset_name
+    # run_inference(dataset_name, animation_name, n_particles, sequential)
 end
