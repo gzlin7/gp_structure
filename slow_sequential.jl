@@ -122,18 +122,18 @@ end
 #
 # make_animation_sequential(animation_name, anim_traj, xs_train, ys_train)
 #
-# @gen function abc()
-#     # obs_choices = choicemap(((1, :type), 4), ((1, :param), 0.541))
-#     # trace = generate(covariance_prior, tuple(1), obs_choices)
-#     # println(trace)
-#     # display(get_choices(trace[1]))
-#     trace = simulate(covariance_prior, tuple(1))
-#     println(trace)
-#     display(get_choices(trace))
-#     # println(retval(trace))
-#     covariance_fn = @trace(covariance_prior(1), :tree)
-#     # choices = covariance_fn.get_choices()
-#     # choices.display()
-# end
-#
-# abc()
+@gen function abc()
+    # obs_choices = choicemap(((1, :type), 4), ((1, :param), 0.541))
+    # trace = generate(covariance_prior, tuple(1), obs_choices)
+    # println(trace)
+    # display(get_choices(trace[1]))
+    trace = simulate(covariance_prior, tuple(1))
+    println(trace)
+    display(get_choices(trace))
+    # println(retval(trace))
+    covariance_fn = @trace(covariance_prior(1), :tree)
+    # choices = covariance_fn.get_choices()
+    # choices.display()
+end
+
+abc()

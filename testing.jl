@@ -55,7 +55,9 @@ function node_to_choicemap(node, map, depth)
             map[(depth, :scale)] = node.scale
             map[(depth, :period)] = node.period
         end
-        return map
+        tree_choicemap = choicemap()
+        set_submap!(tree_choicemap, :tree, map)
+        return tree_choicemap
     end
 end
 
@@ -88,16 +90,17 @@ function run_inference(dataset_name, animation_name, n_particles, sequential, co
     if (sequential)
         # @time state = particle_filter_sequential(xs_train, ys_train, n_particles, pf_callback, anim_traj, xs_test, ys_test, cov_fn)
         # make_animation_sequential(animation_name, anim_traj, n_particles, xs_train, ys_train, xs, ys)
-        # println(([((:y, t), ys_train[t]) for t=1:length(xs_train)]))
         obs_choices = choicemap()
         for t=1:length(ys_train)
             obs_choices[(:y, t)] = ys_train[t]
         end
         cov_fn_map = node_to_choicemap(cov_fn, choicemap(), 1)
+        # display(merge(obs_choices, cov_fn_map))
+        # println(merge(obs_choices, cov_fn_map))
         trace, weight = generate(model, Tuple([xs_train]), merge(obs_choices, cov_fn_map))
         # display(get_choices(trace))
         print(cov_fn)
-        println("    weight ", weight)
+        println("    likelihood ", project(trace, select([(:y, i) => ys_train[i] for i=1:length(ys_train)])))
     # else
     #     x_obs_traj = Float64[]
     #     y_obs_traj = Float64[]
