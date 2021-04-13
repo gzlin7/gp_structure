@@ -34,16 +34,15 @@ function add_tree_layer(cov_grid)
     return new_cov_fns
 end
 
-# only works up to depth 2 trees for now
-# TODO: fix for depth > 2
 node_types = [Constant, Linear, SquaredExponential, Periodic, Plus, Times]
-function node_to_choicemap(node, map, depth)
+function choicemap_helper(node, map, depth)
     type = findfirst(x->x==typeof(node), node_types)
     map[(depth, :type)] = type
     # Plus, Times (recurse)
     if type in [5,6]
-        map = node_to_choicemap(node.left, map, depth+1)
-        return node_to_choicemap(node.right, map, depth+2)
+        map_left = node_to_choicemap(node.left, choicemap(),  get_child(depth, 1, 2))
+        map_right = node_to_choicemap(node.right, choicemap(), get_child(depth, 2, 2))
+        return merge(map, merge(map_left, map_right))
     else
         # Constant, Linear
         if type in [1,2]
@@ -56,10 +55,15 @@ function node_to_choicemap(node, map, depth)
             map[(depth, :scale)] = node.scale
             map[(depth, :period)] = node.period
         end
-        tree_choicemap = choicemap()
-        set_submap!(tree_choicemap, :tree, map)
-        return tree_choicemap
+        return map
     end
+end
+
+function node_to_choicemap(node)
+    choices = choicemap_helper(node, choicemap(), 1)
+    tree_choicemap = choicemap()
+    set_submap!(tree_choicemap, :tree, choices)
+    return tree_choicemap
 end
 
 function get_cov_grid(tree_depth, n_buckets)
@@ -116,3 +120,9 @@ function make_animation_likelihood(animation_name, results, xs_train, ys_train)
     end
     gif(anim, "animations/testing/" * animation_name * ".gif", fps = 2)
 end
+
+# cov_grid = get_cov_grid(3,2)
+# println("COV GRID LENGTH: ", length(cov_grid))
+#
+# println(cov_grid[7000])
+# display(node_to_choicemap(cov_grid[7000]))
