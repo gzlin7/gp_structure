@@ -75,14 +75,44 @@ function get_cov_grid(tree_depth, n_buckets)
     # return [node_to_choicemap(cov_grid[t], choicemap(), 1) for t=1:length(cov_grid)]
 end
 
+function run_inference(dataset_name, sequential, cov_fn, xs_train, ys_train)
+    anim_traj = Dict()
+
+    # set seed
+    Random.seed!(1)
+
+    # do inference and plot visualization
+    if (sequential)
+        obs_choices = choicemap()
+        for t=1:length(ys_train)
+            obs_choices[(:y, t)] = ys_train[t]
+        end
+        cov_fn_map = node_to_choicemap(cov_fn, choicemap(), 1)
+        # display(merge(obs_choices, cov_fn_map))
+        # println(merge(obs_choices, cov_fn_map))
+        trace, weight = generate(model, Tuple([xs_train]), merge(obs_choices, cov_fn_map))
+        likelihood = project(trace, select([(:y, i) for i=1:length(ys_train)]...))
+        # display(get_choices(trace))
+        # print(cov_fn)
+        # println("    likelihood ", likelihood)
+    # else
+    #     x_obs_traj = Float64[]
+    #     y_obs_traj = Float64[]
+        # @time state = particle_filter_acquisition(xs_train, ys_train, n_particles, pf_callback, anim_traj, x_obs_traj, y_obs_traj)
+        # make_animation_acquisition(animation_name, anim_traj, n_particles, xs_train, ys_train, xs, ys, x_obs_traj, y_obs_traj)
+    end
+    return (cov_fn, likelihood)
+end
+
 function make_animation_likelihood(animation_name, results, xs_train, ys_train)
     n_results = length(results)
     anim = @animate for i=1:n_results
         result = results[i]
         cov_fn, likelihood = result
         # plot observations
-        p = plot(xs_train, ys_train, title="[$i/$n_results] $cov_fn, likelihood: $likelihood", ylim=(-3, 3), legend=false, linecolor=:red)
+        rounded_lik = round(likelihood, digits=3)
+        p = plot(xs_train, ys_train, title="[$i/$n_results] $cov_fn, likelihood: $rounded_lik", ylim=(-3, 3), legend=false, linecolor=:red)
         plot_gp(p, cov_fn, 0.8, xs_train, ys_train, xs_train)
     end
-    gif(anim, "animations/" * animation_name * ".gif", fps = 2)
+    gif(anim, "animations/testing/" * animation_name * ".gif", fps = 2)
 end

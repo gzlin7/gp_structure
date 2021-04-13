@@ -73,7 +73,7 @@ function make_animation_sequential(animation_name, anim_traj, n_particles, xs_tr
             end
         end
     end
-    gif(anim, "animations/" * animation_name * ".gif", fps = 1)
+    gif(anim, "animations/sequential/" * animation_name * ".gif", fps = 1)
 end
 
 
@@ -141,5 +141,5 @@ function make_animation_acquisition(animation_name, anim_traj, n_particles, xs_t
 
     end
 
-    gif(anim, "animations/" * animation_name * ".gif", fps = 1)
+    gif(anim, "animations/acquisition/" * animation_name * ".gif", fps = 1)
 end
