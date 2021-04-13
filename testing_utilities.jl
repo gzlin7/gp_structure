@@ -6,12 +6,14 @@ Plots.GRBackend()
 function generate_first_layer(n_buckets)
     cov_fns = Dict(Constant => [], Linear => [], SquaredExponential => [], Periodic => [])
     for param1 in LinRange(1/n_buckets,1.0,n_buckets)
+        param1 = round(param1, digits=2)
         # Constant, Linear, SE
         for kern1 in [Linear, Constant, SquaredExponential]
             push!(cov_fns[kern1], kern1(param1))
         end
         # Periodic- tune second parameter
         for param2 in LinRange(1/n_buckets,1.0,n_buckets)
+            param1 = round(param2, digits=2)
             push!(cov_fns[Periodic],  Periodic(param1,param2))
         end
     end
@@ -40,8 +42,8 @@ function choicemap_helper(node, map, depth)
     map[(depth, :type)] = type
     # Plus, Times (recurse)
     if type in [5,6]
-        map_left = node_to_choicemap(node.left, choicemap(),  get_child(depth, 1, 2))
-        map_right = node_to_choicemap(node.right, choicemap(), get_child(depth, 2, 2))
+        map_left = choicemap_helper(node.left, choicemap(),  get_child(depth, 1, 2))
+        map_right = choicemap_helper(node.right, choicemap(), get_child(depth, 2, 2))
         return merge(map, merge(map_left, map_right))
     else
         # Constant, Linear
@@ -91,7 +93,7 @@ function run_inference(dataset_name, sequential, cov_fn, xs_train, ys_train)
         for t=1:length(ys_train)
             obs_choices[(:y, t)] = ys_train[t]
         end
-        cov_fn_map = node_to_choicemap(cov_fn, choicemap(), 1)
+        cov_fn_map = node_to_choicemap(cov_fn)
         # display(merge(obs_choices, cov_fn_map))
         # println(merge(obs_choices, cov_fn_map))
         trace, weight = generate(model, Tuple([xs_train]), merge(obs_choices, cov_fn_map))
@@ -108,15 +110,30 @@ function run_inference(dataset_name, sequential, cov_fn, xs_train, ys_train)
     return (cov_fn, likelihood)
 end
 
-function make_animation_likelihood(animation_name, results, xs_train, ys_train)
+function plot_covfn(plot, covariance_fn, weight, obs_xs, obs_ys, pred_xs)
+    # plot posterior means and vanriance given one covariance fn
+    (conditional_mu, conditional_cov_matrix) = compute_predictive(
+        covariance_fn, 0.001, obs_xs, obs_ys, pred_xs)
+    variances = []
+    for j=1:length(pred_xs)
+        mu, var = conditional_mu[j], conditional_cov_matrix[j,j]
+        push!(variances, sqrt(var))
+    end
+    pred_ys = mvnormal(conditional_mu, conditional_cov_matrix)
+    plot!(plot,pred_xs,pred_ys, linealpha = weight*10, linecolor=:teal,
+    ribbon=variances, fillalpha=weight*8, fillcolor=:lightblue,
+    legend=true, label = "$covariance_fn")
+end
+
+function make_animation_likelihood(animation_name, results, xs_train, ys_train, sumexp)
     n_results = length(results)
     anim = @animate for i=1:n_results
         result = results[i]
         cov_fn, likelihood = result
         # plot observations
-        rounded_lik = round(likelihood, digits=3)
-        p = plot(xs_train, ys_train, title="[$i/$n_results] $cov_fn, likelihood: $rounded_lik", ylim=(-3, 3), legend=false, linecolor=:red)
-        plot_gp(p, cov_fn, 0.8, xs_train, ys_train, xs_train)
+        cond_py = round(likelihood/logsumexp, digits=3)
+        p = plot(xs_train, ys_train, title="[$i/$n_results]", ylim=(-3, 3), linecolor=:red, legend=true, label = "P(Y | cov_fn): $cond_py")
+        plot_covfn(p, cov_fn, 0.8, xs_train, ys_train, xs_train)
     end
     gif(anim, "animations/testing/" * animation_name * ".gif", fps = 2)
 end
