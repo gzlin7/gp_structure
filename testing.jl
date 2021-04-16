@@ -1,12 +1,12 @@
 include("slow_sequential.jl")
 # include("acquisition_exploration.jl")
 include("testing_utilities.jl")
-n_buckets = 20
-cov_grid = get_cov_grid(1,n_buckets)
+n_buckets = 5
+cov_grid = get_cov_grid(2,n_buckets)
 noise_max = 3
 println("COV GRID LENGTH: ", length(cov_grid))
-# dataset_names = ["cubic", "quadratic", "changepoint", "polynomial", "sinusoid", "airline"]
-dataset_names = ["sinusoid"]
+# dataset_names = ["cubic", "quadratic", "changepoint", "polynomial", "sinusoid", "airline", "linear"]
+dataset_names = ["linear"]
 
 function test_dataset(dataset_names, cov_grid)
     noise = 0.01

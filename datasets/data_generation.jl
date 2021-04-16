@@ -3,8 +3,12 @@ using DataFrames
 using CSV
 
 # data generating functions
+function linear(x)
+    return 0.8x + normal(noise_mu, noise_std)
+end
+
 function quadratic(x)
-    return (x - 0.5) ^ 2 + normal(noise_mu, noise_std)
+    return 4(x - 2) ^ 2 - 2 + normal(noise_mu, noise_std)
 end
 function cubic(x)
     # 20 * (x - 0.2)(x - 0.6)(x - 1) + 0.5
@@ -15,20 +19,20 @@ function polynomial(x)
     return -0.2 * (x - 0.3)^2 * (x - 3.3) * (x - 4.2) * (x - 1.3) * (x - 3.7) * (x + 0.4) * (x - 2.1)
 end
 
-function changepoint(x)
-    if x < 2.0
-        return quadratic(x)
-    else
-        return polynomial(x)
-    end
-end
-
 function sinusoid(x)
     return 0.25sin(20x)
 end
 
-filename = "sinusoid"
-f = sinusoid
+function changepoint(x)
+    if x < 2.0
+        return quadratic(x)
+    else
+        return sinusoid(x)
+    end
+end
+
+filename = "linear"
+f = linear
 n_train = 100
 n_test = 100
 noise_mu = 0
