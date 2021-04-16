@@ -1,4 +1,5 @@
 include("utils/shared.jl")
+include("slow_sequential.jl")
 using Plots
 gr()
 Plots.GRBackend()
@@ -13,7 +14,7 @@ function generate_first_layer(n_buckets)
         end
         # Periodic- tune second parameter
         for param2 in LinRange(1/n_buckets,1.0,n_buckets)
-            param1 = round(param2, digits=2)
+            param2 = round(param2, digits=2)
             push!(cov_fns[Periodic],  Periodic(param1,param2))
         end
     end
@@ -81,7 +82,7 @@ function get_cov_grid(tree_depth, n_buckets)
     # return [node_to_choicemap(cov_grid[t], choicemap(), 1) for t=1:length(cov_grid)]
 end
 
-function run_inference(dataset_name, sequential, cov_fn, xs_train, ys_train)
+function run_inference(dataset_name, sequential, cov_fn, xs_train, ys_train, noise)
     anim_traj = Dict()
 
     # set seed
@@ -96,7 +97,9 @@ function run_inference(dataset_name, sequential, cov_fn, xs_train, ys_train)
         cov_fn_map = node_to_choicemap(cov_fn)
         # display(merge(obs_choices, cov_fn_map))
         # println(merge(obs_choices, cov_fn_map))
-        trace, weight = generate(model, Tuple([xs_train]), merge(obs_choices, cov_fn_map))
+        choices = merge(obs_choices, cov_fn_map)
+        choices[:noise] = noise
+        trace, weight = generate(model, Tuple([xs_train]), choices)
         likelihood = project(trace, select([(:y, i) for i=1:length(ys_train)]...))
         # display(get_choices(trace))
         # print(cov_fn)
@@ -107,10 +110,10 @@ function run_inference(dataset_name, sequential, cov_fn, xs_train, ys_train)
         # @time state = particle_filter_acquisition(xs_train, ys_train, n_particles, pf_callback, anim_traj, x_obs_traj, y_obs_traj)
         # make_animation_acquisition(animation_name, anim_traj, n_particles, xs_train, ys_train, xs, ys, x_obs_traj, y_obs_traj)
     end
-    return (cov_fn, likelihood)
+    return (cov_fn, likelihood, noise)
 end
 
-function plot_covfn(plot, covariance_fn, weight, obs_xs, obs_ys, pred_xs)
+function plot_covfn(plot, covariance_fn, weight, obs_xs, obs_ys, pred_xs, noise)
     # plot posterior means and vanriance given one covariance fn
     (conditional_mu, conditional_cov_matrix) = compute_predictive(
         covariance_fn, 0.001, obs_xs, obs_ys, pred_xs)
@@ -123,17 +126,20 @@ function plot_covfn(plot, covariance_fn, weight, obs_xs, obs_ys, pred_xs)
     plot!(plot,pred_xs,pred_ys, linealpha = weight*10, linecolor=:teal,
     ribbon=variances, fillalpha=weight*8, fillcolor=:lightblue,
     legend=true, label = "$covariance_fn")
+    plot!(plot,pred_xs,pred_ys, linealpha = weight*10, linecolor=:teal,
+    ribbon=variances, fillalpha=weight*8, fillcolor=:green,
+    legend=true, label = "noise = $noise")
 end
 
 function make_animation_likelihood(animation_name, results, xs_train, ys_train, sumexp)
     n_results = length(results)
     anim = @animate for i=1:n_results
         result = results[i]
-        cov_fn, likelihood = result
+        cov_fn, likelihood, noise = result
         # plot observations
-        cond_py = round(likelihood/logsumexp, digits=3)
+        cond_py = round(likelihood/sumexp, digits=3)
         p = plot(xs_train, ys_train, title="[$i/$n_results]", ylim=(-3, 3), linecolor=:red, legend=true, label = "P(Y | cov_fn): $cond_py")
-        plot_covfn(p, cov_fn, 0.8, xs_train, ys_train, xs_train)
+        plot_covfn(p, cov_fn, 0.8, xs_train, ys_train, xs_train, noise)
     end
     gif(anim, "animations/testing/" * animation_name * ".gif", fps = 2)
 end

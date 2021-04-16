@@ -1,3 +1,5 @@
+using Gen
+
 @gen function covariance_prior(cur::Int)
     node_type = @trace(categorical(node_dist), (cur, :type))
 

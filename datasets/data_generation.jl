@@ -24,7 +24,7 @@ function changepoint(x)
 end
 
 function sinusoid(x)
-    return sin(4x)
+    return 0.25sin(20x)
 end
 
 filename = "sinusoid"
