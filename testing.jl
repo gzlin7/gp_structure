@@ -6,7 +6,7 @@ cov_grid = get_cov_grid(2,n_buckets)
 noise_max = 3
 println("COV GRID LENGTH: ", length(cov_grid))
 # dataset_names = ["cubic", "quadratic", "changepoint", "polynomial", "sinusoid", "airline", "linear"]
-dataset_names = ["linear"]
+dataset_names = ["quadratic", "changepoint", "polynomial", "airline", "linear"]
 
 function test_dataset(dataset_names, cov_grid)
     noise = 0.01
@@ -17,36 +17,39 @@ function test_dataset(dataset_names, cov_grid)
         else
             (xs, ys) = get_dataset(dataset_name)
         end
-        xs_train = xs[1:100]
-        ys_train = ys[1:100]
-        xs_test = xs[101:end]
-        ys_test = ys[101:end]
+        all_xs_train = xs[1:100]
+        all_ys_train = ys[1:100]
 
-        results = []
-        sum_exp = 0
+        for n_obs in [20, 40, 60, 80, 100]
+            results = []
+            sum_exp = 0
 
-        for i=1:length(cov_grid)
-            if mod(i,1000) == 0
-                println(i)
+            xs_train = xs[1:n_obs]
+            ys_train = ys[1:n_obs]
+
+            for i=1:length(cov_grid)
+                if mod(i,1000) == 0
+                    println(i)
+                end
+                cov_fn = cov_grid[i]
+                # for noise in LinRange(1/n_buckets,noise_max,n_buckets)
+                # # run sequential prediction
+                sequential = true
+                _, likelihood, noise = run_inference(dataset_name, true, cov_fn, xs_train, ys_train, noise)
+                sum_exp += exp(likelihood)
+                push!(results, (cov_fn, exp(likelihood), noise))
+                # end
             end
-            cov_fn = cov_grid[i]
-            # for noise in LinRange(1/n_buckets,noise_max,n_buckets)
-            # # run sequential prediction
-            sequential = true
-            _, likelihood, noise = run_inference(dataset_name, true, cov_fn, xs_train, ys_train, noise)
-            sum_exp += exp(likelihood)
-            push!(results, (cov_fn, exp(likelihood), noise))
-            # end
-        end
 
-        # sort by likelihood
-        sort!(results, by = x -> x[2], rev = true);
-        for ret in results
-            # print(ret[1])
-            # println("    likelihood ", ret[2])
+            # sort by likelihood
+            sort!(results, by = x -> x[2], rev = true);
+            for ret in results
+                # print(ret[1])
+                # println("    likelihood ", ret[2])
+            end
+            animation_name = "testing_" * dataset_name
+            make_animation_likelihood(animation_name, results, xs_train, ys_train, sum_exp, dataset_name)
         end
-        animation_name = "testing_" * dataset_name
-        make_animation_likelihood(animation_name, results, xs_train, ys_train, sum_exp)
     end
 end
 

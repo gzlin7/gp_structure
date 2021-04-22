@@ -131,7 +131,7 @@ function plot_covfn(plot, covariance_fn, weight, obs_xs, obs_ys, pred_xs, noise)
     legend=true, label = "noise = $noise")
 end
 
-function make_animation_likelihood(animation_name, results, xs_train, ys_train, sumexp)
+function make_animation_likelihood(animation_name, results, xs_train, ys_train, sumexp, dataset_name)
     n_results = length(results)
     anim = @animate for i=1:n_results
         result = results[i]
@@ -141,7 +141,7 @@ function make_animation_likelihood(animation_name, results, xs_train, ys_train, 
         p = plot(xs_train, ys_train, title="[$i/$n_results]", ylim=(-3, 3), linecolor=:red, legend=true, label = "P(Y | cov_fn): $cond_py")
         plot_covfn(p, cov_fn, 0.8, xs_train, ys_train, xs_train, noise)
     end
-    gif(anim, "animations/testing/" * animation_name * ".gif", fps = 2)
+    gif(anim, "animations/testing/" * dataset_name * "/" * animation_name * "_" * string(length(xs_train)) * ".gif", fps = 2)
 end
 
 # cov_grid = get_cov_grid(3,2)
