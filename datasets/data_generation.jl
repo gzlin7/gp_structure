@@ -33,7 +33,7 @@ end
 
 filename = "linear"
 f = linear
-n_train = 100
+n_train = 300
 n_test = 100
 noise_mu = 0
 noise_std = 0.01

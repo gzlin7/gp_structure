@@ -2,25 +2,29 @@ include("slow_sequential.jl")
 # include("acquisition_exploration.jl")
 include("testing_utilities.jl")
 n_buckets = 5
-cov_grid = get_cov_grid(2,n_buckets)
+cov_grid = get_cov_grid(1,n_buckets)
 noise_max = 3
 println("COV GRID LENGTH: ", length(cov_grid))
-# dataset_names = ["cubic", "quadratic", "changepoint", "polynomial", "sinusoid", "airline", "linear"]
-dataset_names = ["quadratic", "changepoint", "polynomial", "airline", "linear"]
+dataset_names = ["cubic", "quadratic", "changepoint", "polynomial", "sinusoid", "airline", "linear"]
+# dataset_names = ["quadratic", "changepoint", "polynomial", "airline", "linear"]
+dataset_names = ["polynomial"]
+
 
 function test_dataset(dataset_names, cov_grid)
-    noise = 0.01
+    noise = 0.0001
 
     for dataset_name in dataset_names
+        # load data
         if (dataset_name == "airline")
             (xs, ys) = get_airline_dataset()
         else
             (xs, ys) = get_dataset(dataset_name)
         end
-        all_xs_train = xs[1:100]
-        all_ys_train = ys[1:100]
+        xs = xs[1:300]
+        ys = ys[1:300]
 
-        for n_obs in [20, 40, 60, 80, 100]
+        # run inference
+        for n_obs in [50,100,200,300]
             results = []
             sum_exp = 0
 
@@ -47,8 +51,10 @@ function test_dataset(dataset_names, cov_grid)
                 # print(ret[1])
                 # println("    likelihood ", ret[2])
             end
+
+            # animate
             animation_name = "testing_" * dataset_name
-            make_animation_likelihood(animation_name, results, xs_train, ys_train, sum_exp, dataset_name)
+            make_animation_likelihood(animation_name, results, xs, ys, sum_exp, dataset_name, n_obs)
         end
     end
 end

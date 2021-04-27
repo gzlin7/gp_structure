@@ -116,22 +116,22 @@ end
 function plot_covfn(plot, covariance_fn, weight, obs_xs, obs_ys, pred_xs, noise)
     # plot posterior means and vanriance given one covariance fn
     (conditional_mu, conditional_cov_matrix) = compute_predictive(
-        covariance_fn, 0.001, obs_xs, obs_ys, pred_xs)
+        covariance_fn, noise, obs_xs, obs_ys, pred_xs)
     variances = []
     for j=1:length(pred_xs)
         mu, var = conditional_mu[j], conditional_cov_matrix[j,j]
         push!(variances, sqrt(var))
     end
     pred_ys = mvnormal(conditional_mu, conditional_cov_matrix)
-    plot!(plot,pred_xs,pred_ys, linealpha = weight*10, linecolor=:teal,
-    ribbon=variances, fillalpha=weight*8, fillcolor=:lightblue,
+    plot!(plot,pred_xs,pred_ys, linealpha = weight*10, linecolor=:yellow,
+    ribbon=variances, fillalpha=weight*8, fillcolor=:green,
     legend=true, label = "$covariance_fn")
     plot!(plot,pred_xs,pred_ys, linealpha = weight*10, linecolor=:teal,
     ribbon=variances, fillalpha=weight*8, fillcolor=:green,
     legend=true, label = "noise = $noise")
 end
 
-function make_animation_likelihood(animation_name, results, xs_train, ys_train, sumexp, dataset_name)
+function make_animation_likelihood(animation_name, results, xs_train, ys_train, sumexp, dataset_name, n_obs)
     n_results = length(results)
     anim = @animate for i=1:n_results
         result = results[i]
@@ -141,7 +141,7 @@ function make_animation_likelihood(animation_name, results, xs_train, ys_train, 
         p = plot(xs_train, ys_train, title="[$i/$n_results]", ylim=(-3, 3), linecolor=:red, legend=true, label = "P(Y | cov_fn): $cond_py")
         plot_covfn(p, cov_fn, 0.8, xs_train, ys_train, xs_train, noise)
     end
-    gif(anim, "animations/testing/" * dataset_name * "/" * animation_name * "_" * string(length(xs_train)) * ".gif", fps = 2)
+    gif(anim, "animations/testing/" * dataset_name * "/" * animation_name * "_" * string(n_obs) * ".gif", fps = 2)
 end
 
 # cov_grid = get_cov_grid(3,2)
