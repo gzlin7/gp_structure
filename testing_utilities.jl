@@ -95,22 +95,13 @@ function run_inference(dataset_name, sequential, cov_fn, xs_train, ys_train, noi
             obs_choices[(:y, t)] = ys_train[t]
         end
         cov_fn_map = node_to_choicemap(cov_fn)
-        # display(merge(obs_choices, cov_fn_map))
-        # println(merge(obs_choices, cov_fn_map))
         choices = merge(obs_choices, cov_fn_map)
         choices[:noise] = noise
         trace, weight = generate(model, Tuple([xs_train]), choices)
+        num = exp(get_score(trace))
         likelihood = project(trace, select([(:y, i) for i=1:length(ys_train)]...))
-        # display(get_choices(trace))
-        # print(cov_fn)
-        # println("    likelihood ", likelihood)
-    # else
-    #     x_obs_traj = Float64[]
-    #     y_obs_traj = Float64[]
-        # @time state = particle_filter_acquisition(xs_train, ys_train, n_particles, pf_callback, anim_traj, x_obs_traj, y_obs_traj)
-        # make_animation_acquisition(animation_name, anim_traj, n_particles, xs_train, ys_train, xs, ys, x_obs_traj, y_obs_traj)
     end
-    return (cov_fn, likelihood, noise)
+    return (cov_fn, likelihood, noise, num)
 end
 
 function plot_covfn(plot, covariance_fn, weight, obs_xs, obs_ys, pred_xs, noise)
@@ -122,12 +113,12 @@ function plot_covfn(plot, covariance_fn, weight, obs_xs, obs_ys, pred_xs, noise)
         mu, var = conditional_mu[j], conditional_cov_matrix[j,j]
         push!(variances, sqrt(var))
     end
-    pred_ys = mvnormal(conditional_mu, conditional_cov_matrix)
+    pred_ys = conditional_mu
     plot!(plot,pred_xs,pred_ys, linealpha = weight*10, linecolor=:yellow,
-    ribbon=variances, fillalpha=weight*8, fillcolor=:green,
+    ribbon=variances, fillalpha=1, fillcolor=:green,
     legend=true, label = "$covariance_fn")
     plot!(plot,pred_xs,pred_ys, linealpha = weight*10, linecolor=:teal,
-    ribbon=variances, fillalpha=weight*8, fillcolor=:green,
+    ribbon=variances, fillalpha=1, fillcolor=:green,
     legend=true, label = "noise = $noise")
 end
 
@@ -138,14 +129,61 @@ function make_animation_likelihood(animation_name, results, xs_train, ys_train, 
         cov_fn, likelihood, noise = result
         # plot observations
         cond_py = round(likelihood/sumexp, digits=3)
-        p = plot(xs_train, ys_train, title="[$i/$n_results]", ylim=(-3, 3), linecolor=:red, legend=true, label = "P(Y | cov_fn): $cond_py")
+        p = plot(xs_train, ys_train, title="[$i/$n_results] $n_obs Observations", ylim=(-3, 3), linecolor=:red, legend=true, label = "P(Y | cov_fn): $cond_py")
         plot_covfn(p, cov_fn, 0.8, xs_train, ys_train, xs_train, noise)
+    end
+    if isdir("animations/testing/" * dataset_name * "/") == false
+        mkdir("animations/testing/" * dataset_name * "/")
     end
     gif(anim, "animations/testing/" * dataset_name * "/" * animation_name * "_" * string(n_obs) * ".gif", fps = 2)
 end
 
-# cov_grid = get_cov_grid(3,2)
-# println("COV GRID LENGTH: ", length(cov_grid))
-#
-# println(cov_grid[7000])
-# display(node_to_choicemap(cov_grid[7000]))
+function test_dataset(dataset_name, cov_grid, f, n_train; sequential=false, animate=false)
+    noise = 0.0001
+    ret = []
+
+    # Generate data
+    xs = collect(LinRange(0.0,2.0,n_train))
+    sort!(xs)
+    ys = deepcopy(xs)
+    @. ys = f.(xs)
+
+    # run inference
+    seq_obs = sequential ? LinRange(n_train/4,n_train,4) : [n_train]
+    for n_obs in seq_obs
+        n_obs = Integer(round(n_obs))
+        results = []
+        sum_exp = 0
+
+        xs_train = xs[1:n_obs]
+        ys_train = ys[1:n_obs]
+
+        for i=1:length(cov_grid)
+            if mod(i,1000) == 0
+                println(i)
+            end
+            cov_fn = cov_grid[i]
+            # for noise in LinRange(1/n_buckets,noise_max,n_buckets)
+            # # run sequential prediction
+            sequential = true
+            _, likelihood, noise, tr = run_inference(dataset_name, true, cov_fn, xs_train, ys_train, noise)
+            sum_exp += exp(likelihood)
+            push!(results, (cov_fn, exp(likelihood), noise))
+            # end
+        end
+
+        # sort by likelihood
+        sort!(results, by = x -> x[2], rev = true);
+        for result in results[1:5]
+            print(result)
+        end
+        ret = results
+
+        # animate
+        if animate
+            animation_name = "testing_" * dataset_name
+            make_animation_likelihood(animation_name, results, xs, ys, sum_exp, dataset_name, n_obs)
+        end
+    end
+    return map(x -> x[1], ret)[1:5]
+end

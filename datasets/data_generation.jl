@@ -20,7 +20,7 @@ function polynomial(x)
 end
 
 function sinusoid(x)
-    return 0.25sin(20x)
+    return 0.20sin(15.7x)
 end
 
 function changepoint(x)
@@ -31,9 +31,9 @@ function changepoint(x)
     end
 end
 
-filename = "linear"
-f = linear
-n_train = 300
+filename = "sinusoid"
+f = sinusoid
+n_train = 1000
 n_test = 100
 noise_mu = 0
 noise_std = 0.01
