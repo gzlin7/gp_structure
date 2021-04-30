@@ -22,7 +22,7 @@ function plot_gp(plot, covariance_fn, weight, obs_xs, obs_ys, pred_xs)
         mu, var = conditional_mu[j], conditional_cov_matrix[j,j]
         push!(variances, sqrt(var))
     end
-    pred_ys = mvnormal(conditional_mu, conditional_cov_matrix)
+    pred_ys = conditional_mu
     plot!(plot,pred_xs,pred_ys, linealpha = weight*10, linecolor=:teal,
     ribbon=variances, fillalpha=weight*8, fillcolor=:lightblue)
 end

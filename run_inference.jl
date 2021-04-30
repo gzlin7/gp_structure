@@ -1,18 +1,38 @@
 include("sequential.jl")
-# include("acquisition.jl")
 include("acquisition_exploration.jl")
 
-function run_inference(dataset_name, animation_name, n_particles, sequential)
+
+functions = Dict("sinusoid"=> x -> 0.20sin(15.7x),
+                 "linear"=> x -> 0.4x,
+                 "quadratic" => x -> 4(x - 2) ^ 2 - 2,
+                 "polynomial" => x -> -0.2 * (x - 0.3)^2 * (x - 3.3) * (x - 4.2) * (x - 1.3) * (x - 3.7) * (x + 0.4) * (x - 2.1),
+                 "cubic" => x -> 20 * ((x - 0.2)*(x - 0.6)*(x - 1)) + 0.5,
+                 "changepoint" => x -> x < 2.0 ? 4(x - 1) ^ 2 : 0.20sin(15.7x),
+                 "airline" => get_airline_dataset
+                 )
+
+
+function run_inference(dataset_name, animation_name, n_particles, sequential, f, n_obs)
     # load the dataset
     if (dataset_name == "airline")
-        (xs, ys) = get_airline_dataset()
+        (xs, ys) = f()
+        xs_train = xs[1:100]
+        ys_train = ys[1:100]
+        xs_test = xs_train
+        ys_test = ys_train
+
     else
-        (xs, ys) = get_dataset(dataset_name)
+        # Generate data
+        xs_train = collect(LinRange(0.0,4.0,n_obs))
+        sort!(xs_train)
+        ys_train = deepcopy(xs_train)
+        @. ys_train = f.(xs_train)
+
+        xs_test = [uniform(0.0,4.0) for t=1:n_obs]
+        sort!(xs_test)
+        ys_test = deepcopy(xs_test)
+        @. ys_test = f.(xs_test)
     end
-    xs_train = xs[1:100]
-    ys_train = ys[1:100]
-    xs_test = xs[101:end]
-    ys_test = ys[101:end]
 
     anim_traj = Dict()
 
@@ -44,33 +64,32 @@ function run_inference(dataset_name, animation_name, n_particles, sequential)
     # do inference and plot visualization
     if (sequential)
         @time state = particle_filter_sequential(xs_train, ys_train, n_particles, pf_callback, anim_traj)
-        make_animation_sequential(animation_name, anim_traj, n_particles, xs_train, ys_train, xs, ys)
+        make_animation_sequential(animation_name, anim_traj, n_particles, xs_train, ys_train, xs_test, ys_test)
     else
         x_obs_traj = Float64[]
         y_obs_traj = Float64[]
         @time state = particle_filter_acquisition(xs_train, ys_train, n_particles, pf_callback, anim_traj, x_obs_traj, y_obs_traj)
-        make_animation_acquisition(animation_name, anim_traj, n_particles, xs_train, ys_train, xs, ys, x_obs_traj, y_obs_traj)
+        make_animation_acquisition(animation_name, anim_traj, n_particles, xs_train, ys_train, xs_test, ys_test, x_obs_traj, y_obs_traj)
     end
 end
 
-# dataset_names = ["airline"]
-# dataset_names = ["quadratic", "changepoint", "polynomial"]
-dataset_names = ["sinusoid"]
+dataset_names = ["changepoint", "polynomial", "sinusoid", "quadratic", "linear","airline"]
+n_particles_all = [50, 100]
 
 
 for i=1:length(dataset_names)
     dataset_name = dataset_names[i]
 
     # # run sequential prediction
-    n_particles = 100
-    sequential = true
-    animation_name = "sequential_" * dataset_name
-    run_inference(dataset_name, animation_name, n_particles, sequential)
+    for n_particles in n_particles_all
+        # sequential = true
+        # animation_name = "sequential_" * dataset_name * "_" * string(n_particles)
 
-    # run acquisition prediction
-    # n_particles = 100
-    # sequential = false
-    # animation_name = "acq_exp_" * dataset_name
-    # # animation_name = "acquisition_" * dataset_name
-    # run_inference(dataset_name, animation_name, n_particles, sequential)
+        # run acquisition prediction
+        sequential = false
+        animation_name = "acquisition_" * dataset_name * "_" * string(n_particles)
+        # animation_name = "acquisition_" * dataset_name
+
+        run_inference(dataset_name, animation_name, n_particles, sequential, functions[dataset_name], 100)
+    end
 end
