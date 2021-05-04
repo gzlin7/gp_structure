@@ -11,6 +11,16 @@ functions = Dict("sinusoid"=> x -> 0.20sin(15.7x),
                  "airline" => get_airline_dataset
                  )
 
+ fn_to_obs = Dict("sinusoid"=> 100,
+                  "linear"=> 50,
+                  "quadratic" => 50,
+                  "polynomial" => 100,
+                  "cubic" => 100,
+                  "changepoint" => 100,
+                  "airline" => 100
+                  )
+
+
 
 function run_inference(dataset_name, animation_name, n_particles, sequential, f, n_obs)
     # load the dataset
@@ -73,25 +83,36 @@ function run_inference(dataset_name, animation_name, n_particles, sequential, f,
     end
 end
 
-# dataset_names = ["changepoint", "polynomial", "sinusoid", "quadratic", "linear","airline"]
-dataset_names = ["quadratic", "linear","airline"]
-
+dataset_names = ["changepoint", "polynomial", "sinusoid", "quadratic", "linear","airline", "quadratic"]
+# dataset_names = ["quadratic"]
 n_particles_all = [50, 100]
+
+
+# n_particles = 50
+# dataset_name = "quadratic"
+# sequential = true
+# animation_name = "sequential_" * dataset_name * "_" * string(n_particles)
+#
+# ret = run_inference(dataset_name, animation_name, n_particles, sequential, functions[dataset_name], n_observations)
+# @unpack animation_name, anim_traj, n_particles, xs_train, ys_train, xs_test, ys_test, x_obs_traj, y_obs_traj = ret;
+#
+# make_animation_acquisition(animation_name, anim_traj, n_particles, xs_train, ys_train, xs_test, ys_test, x_obs_traj, y_obs_traj)
 
 
 for i=1:length(dataset_names)
     dataset_name = dataset_names[i]
+    n_observations = fn_to_obs[dataset_name]
 
     # # run sequential prediction
     for n_particles in n_particles_all
-        # sequential = true
-        # animation_name = "sequential_" * dataset_name * "_" * string(n_particles)
+        sequential = true
+        animation_name = "sequential_" * dataset_name * "_" * string(n_particles)
 
         # run acquisition prediction
-        sequential = false
-        animation_name = "acquisition_" * dataset_name * "_" * string(n_particles)
+        # sequential = false
+        # animation_name = "acquisition_" * dataset_name * "_" * string(n_particles)
         # animation_name = "acquisition_" * dataset_name
 
-        run_inference(dataset_name, animation_name, n_particles, sequential, functions[dataset_name], 100)
+        run_inference(dataset_name, animation_name, n_particles, sequential, functions[dataset_name], n_observations)
     end
 end

@@ -13,10 +13,10 @@ function get_n_top_weight_idxs(n, weights)
     return best_idxes
 end
 
-function plot_gp(plot, covariance_fn, weight, obs_xs, obs_ys, pred_xs)
+function plot_gp(plot, covariance_fn, weight, obs_xs, obs_ys, pred_xs, noise)
     # plot posterior means and vanriance given one covariance fn
     (conditional_mu, conditional_cov_matrix) = compute_predictive(
-        covariance_fn, 0.001, obs_xs, obs_ys, pred_xs)
+        covariance_fn, noise, obs_xs, obs_ys, pred_xs)
     variances = []
     for j=1:length(pred_xs)
         mu, var = conditional_mu[j], conditional_cov_matrix[j,j]
@@ -24,19 +24,7 @@ function plot_gp(plot, covariance_fn, weight, obs_xs, obs_ys, pred_xs)
     end
     pred_ys = conditional_mu
     plot!(plot,pred_xs,pred_ys, linealpha = weight*10, linecolor=:teal,
-    ribbon=variances, fillalpha=weight*8, fillcolor=:lightblue)
-end
-
-function plot_obs_variance(plot, covariance_fn, weight, obs_xs, obs_ys)
-    # plot variance on observed data
-    obs_variances = zeros(Float64, length(obs_xs))
-    (obs_conditional_mu, obs_conditional_cov_matrix) = compute_predictive(
-        covariance_fn, 0.001, obs_xs, obs_ys, obs_xs)
-        for j=1:length(obs_xs)
-            mu, var = obs_conditional_mu[j], obs_conditional_cov_matrix[j,j]
-            obs_variances[j] += sqrt(var)
-        end
-    plot!(plot, obs_xs, obs_ys, ribbon=obs_variances, fillalpha=max(0.15, weight*5), fillcolor=:coral)
+    ribbon=variances, fillalpha=weight*2, fillcolor=:lightblue)
 end
 
 # plotting functions
@@ -50,27 +38,24 @@ function make_animation_sequential(animation_name, anim_traj, n_particles, xs_tr
         vals = anim_traj[obs]
         obs_xs = xs_train[1:obs]
         obs_ys = ys_train[1:obs]
-        pred_xs = xs[obs+1:length(xs)]
+        pred_xs = xs
 
         # plot observations
-        p = plot(xs_train, ys_train, title="$obs Observations, $n_particles Particles ", ylim=(-2, 3), legend=false, linecolor=:red)
+        p = plot(xs_train, ys_train, title="$obs Observations, $n_particles Particles ", ylim=(minimum(ys_train)-1, maximum(ys_train)+1), legend=false, linecolor=:red)
 
         # get indices of the top n particles
-        weights = [vals[i][3] for i=1:length(vals)]
-        n = 5
-        best_idxes = get_n_top_weight_idxs(n, weights)
+        # weights = [vals[i][3] for i=1:length(vals)]
+        # n = 5
+        # best_idxes = get_n_top_weight_idxs(n, weights)
 
         # plot predictions
         for i=1:length(vals)
             covariance_fn = vals[i][1]
             noise = vals[i][2]
             weight = vals[i][3]
-            # plot predictions for top particles
-            if i in best_idxes
-                plot_gp(p, covariance_fn, weight, obs_xs, obs_ys, pred_xs)
-                plot_obs_variance(p, covariance_fn, weight, obs_xs, obs_ys)
-                plot!(p, obs_xs, obs_ys, seriestype = :scatter,  marker = (:circle, 3, 0.6, :orange, stroke(1, 1, :black, :dot)))
-            end
+        # plot predictions for top particles
+            plot_gp(p, covariance_fn, weight, obs_xs, obs_ys, pred_xs, noise)
+            plot!(p, obs_xs, obs_ys, seriestype = :scatter,  marker = (:circle, 3, 0.6, :orange, stroke(1, 1, :black, :dot)))
         end
     end
     gif(anim, "animations/sequential/" * animation_name * ".gif", fps = 1)
@@ -98,9 +83,9 @@ function make_animation_acquisition(animation_name, anim_traj, n_particles, xs_t
         p = plot(xs_train, ys_train, title="$obs Observations, $n_particles Particles ", ylim=(-2, 5), legend=false, linecolor=:red)
 
         # get indices of the top n particles
-        weights = [vals[i][3] for i=1:length(vals)]
-        n = 5
-        best_idxes = get_n_top_weight_idxs(n, weights)
+        # weights = [vals[i][3] for i=1:length(vals)]
+        # n = 5
+        # best_idxes = get_n_top_weight_idxs(n, weights)
 
         # plot predictions
         # println("best_idxes", best_idxes)
@@ -109,13 +94,8 @@ function make_animation_acquisition(animation_name, anim_traj, n_particles, xs_t
             println(covariance_fn)
             noise = vals[i][2]
             weight = vals[i][3]
-            # plot predictions for top particles
-            if i in best_idxes
-                # print("idx ", i)
-                # print("weight ", weight)
-                plot_gp(p, covariance_fn, weight, obs_xs, obs_ys, pred_xs)
-                # plot_obs_variance(p, covariance_fn, weight, obs_xs, obs_ys)
-            end
+            plot_gp(p, covariance_fn, weight, obs_xs, obs_ys, pred_xs)
+
             # add E[UCB] * weight
             (conditional_mu, conditional_cov_matrix) = compute_predictive(
                 covariance_fn, noise, obs_xs, obs_ys, e_ucb_xs)
