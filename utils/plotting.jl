@@ -89,7 +89,7 @@ function make_animation_acquisition(animation_name, anim_traj, n_particles, xs_t
         obs_ys = y_obs_traj[1:obs]
         pred_xs = xs
 
-        e_ucb_xs = Array(LinRange(0.0, 1.0, 50))
+        e_ucb_xs = Array(LinRange(0.0, maximum(xs_train), 50))
         e_ucb_vars = zeros(Float64, length(e_ucb_xs))
         e_ucb_mus =  zeros(Float64, length(e_ucb_xs))
         k = 0.8

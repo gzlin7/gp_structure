@@ -73,7 +73,9 @@ function run_inference(dataset_name, animation_name, n_particles, sequential, f,
     end
 end
 
-dataset_names = ["changepoint", "polynomial", "sinusoid", "quadratic", "linear","airline"]
+# dataset_names = ["changepoint", "polynomial", "sinusoid", "quadratic", "linear","airline"]
+dataset_names = ["quadratic", "linear","airline"]
+
 n_particles_all = [50, 100]
 
 
