@@ -94,7 +94,7 @@ function make_animation_acquisition(animation_name, anim_traj, n_particles, xs_t
             println(covariance_fn)
             noise = vals[i][2]
             weight = vals[i][3]
-            plot_gp(p, covariance_fn, weight, obs_xs, obs_ys, pred_xs)
+            plot_gp(p, covariance_fn, weight, obs_xs, obs_ys, pred_xs, noise)
 
             # add E[UCB] * weight
             (conditional_mu, conditional_cov_matrix) = compute_predictive(
@@ -102,8 +102,8 @@ function make_animation_acquisition(animation_name, anim_traj, n_particles, xs_t
 
             for j=1:length(e_ucb_xs)
                 mu, var = conditional_mu[j], conditional_cov_matrix[j,j]
-                e_ucb_vars[j] += (k * var) * weights[i]
-                e_ucb_mus[j] += mu * weights[i]
+                e_ucb_vars[j] += (k * var) * weight
+                e_ucb_mus[j] += mu * weight
             end
         end
         plot!(p, e_ucb_xs, e_ucb_mus, yerror=e_ucb_vars, alpha=0.5)

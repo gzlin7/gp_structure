@@ -66,7 +66,7 @@ end
 
 function get_next_obs_x(state, new_xs, x_obs, y_obs)
     k = 0.8
-    n_traces = 5
+    n_traces = 50
     e_ucb = zeros(Float64, length(new_xs))
     weights = get_norm_weights(state)
 

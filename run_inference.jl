@@ -109,9 +109,9 @@ for i=1:length(dataset_names)
         animation_name = "sequential_" * dataset_name * "_" * string(n_particles)
 
         # run acquisition prediction
-        # sequential = false
-        # animation_name = "acquisition_" * dataset_name * "_" * string(n_particles)
-        # animation_name = "acquisition_" * dataset_name
+        sequential = false
+        animation_name = "acquisition_" * dataset_name * "_" * string(n_particles)
+        animation_name = "acquisition_" * dataset_name
 
         run_inference(dataset_name, animation_name, n_particles, sequential, functions[dataset_name], n_observations)
     end
