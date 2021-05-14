@@ -78,7 +78,7 @@ function run_inference(dataset_name, animation_name, n_particles, sequential, f,
     else
         x_obs_traj = Float64[]
         y_obs_traj = Float64[]
-        @time state = particle_filter_acquisition(xs_train, ys_train, n_particles, pf_callback, anim_traj, x_obs_traj, y_obs_traj)
+        @time state = particle_filter_acquisition(xs_train, ys_train, n_particles, pf_callback, anim_traj, x_obs_traj, y_obs_traj, ucb_fn)
         make_animation_acquisition(animation_name, anim_traj, n_particles, xs_train, ys_train, xs_test, ys_test, x_obs_traj, y_obs_traj)
     end
 end

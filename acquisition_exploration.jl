@@ -5,10 +5,24 @@ using GenParticleFilters
 using Optim
 @load_generated_functions()
 
-function particle_filter_acquisition(xs::Vector{Float64}, ys::Vector{Float64}, n_particles, callback, anim_traj, x_obs_traj, y_obs_traj)
+# acquisition functions
+
+# UCB
+function ucb_fn(mu, var)
+    k = 0.8
+    return mu + k * var
+end
+
+# EI http://krasserm.github.io/2018/03/21/bayesian-optimization/
+# function ei_fn(mu,var)
+#
+# end
+
+
+function particle_filter_acquisition(xs::Vector{Float64}, ys::Vector{Float64}, n_particles, callback, anim_traj, x_obs_traj, y_obs_traj, acq_fn)
     # n_obs = length(xs)
     n_obs = 30
-    n_explore = 10
+    n_explore = 5
     obs_idx = [1]
     obs_xs = [xs[1]]
     obs_ys = [ys[1]]
@@ -38,7 +52,7 @@ function particle_filter_acquisition(xs::Vector{Float64}, ys::Vector{Float64}, n
 
         # select next observation point
         if (t > n_explore)
-            potential_xs_idx = get_next_obs_x(state, potential_xs, obs_xs, obs_ys)
+            potential_xs_idx = get_next_obs_x(state, potential_xs, obs_xs, obs_ys, acq_fn)
         else
             potential_xs_idx = rand(1:length(potential_xs))
         end
@@ -64,15 +78,14 @@ function particle_filter_acquisition(xs::Vector{Float64}, ys::Vector{Float64}, n
     return state
 end
 
-function get_next_obs_x(state, new_xs, x_obs, y_obs)
-    k = 0.8
+function get_next_obs_x(state, new_xs, x_obs, y_obs, acq_fn)
     n_traces = 50
-    e_ucb = zeros(Float64, length(new_xs))
     weights = get_norm_weights(state)
 
     # Continuous: use Optim to find next x
-    function get_e_ucb(x)
-        e_ucb1 = 0
+    function integrated_acq_fn(x)
+        e_acq = 0
+        # TODO: verify unweighted trace sampling or switch to weighting
         traces = sample_unweighted_traces(state, n_traces)
         for i=1:n_traces
             trace = traces[i]
@@ -80,30 +93,13 @@ function get_next_obs_x(state, new_xs, x_obs, y_obs)
             noise = trace[:noise]
             (conditional_mu, conditional_cov_matrix) = compute_predictive(
                 covariance_fn, noise, x_obs, y_obs, [x])
-
             mu, var = conditional_mu[1], conditional_cov_matrix[1,1]
-            e_ucb1 += (mu + k * var)
+            e_acq += acq_fn(mu,var)
         end
         # negative to return max, since minimization
-        return -e_ucb1
+        return e_acq
     end
 
-    x_maximizer = Optim.minimizer(optimize(get_e_ucb,  0.0, 1.0))
-    println("maximizer = ", x_maximizer)
-    return argmin(abs.(new_xs .- x_maximizer))
-
-    # discrete: iteratively find next x
-    # for i=1:n_particles
-    #     trace = state.traces[i]
-    #     covariance_fn = get_retval(trace)[1]
-    #     noise = trace[:noise]
-    #     (conditional_mu, conditional_cov_matrix) = compute_predictive(
-    #         covariance_fn, noise, x_obs, y_obs, new_xs)
-    #
-    #     for j=1:length(new_xs)
-    #         mu, var = conditional_mu[j], conditional_cov_matrix[j,j]
-    #         e_ucb[j] += (mu + k * var) * weights[i]
-    #     end
-    # end
-    # return argmax(e_ucb)
+    minimizing_x = Optim.minimizer(optimize(integrated_acq_fn,  minimum(new_xs), maximum(new_xs)))
+    return argmin(abs.(new_xs .- minimizing_x))
 end

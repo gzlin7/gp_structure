@@ -24,7 +24,7 @@ function plot_gp(plot, covariance_fn, weight, obs_xs, obs_ys, pred_xs, noise)
     end
     pred_ys = conditional_mu
     plot!(plot,pred_xs,pred_ys, linealpha = weight*10, linecolor=:teal,
-    ribbon=variances, fillalpha=weight*2, fillcolor=:lightblue)
+    ribbon=variances, fillalpha=weight, fillcolor=:lightblue)
 end
 
 # plotting functions
@@ -91,7 +91,6 @@ function make_animation_acquisition(animation_name, anim_traj, n_particles, xs_t
         # println("best_idxes", best_idxes)
         for i=1:length(vals)
             covariance_fn = vals[i][1]
-            println(covariance_fn)
             noise = vals[i][2]
             weight = vals[i][3]
             plot_gp(p, covariance_fn, weight, obs_xs, obs_ys, pred_xs, noise)
@@ -109,15 +108,15 @@ function make_animation_acquisition(animation_name, anim_traj, n_particles, xs_t
         plot!(p, e_ucb_xs, e_ucb_mus, yerror=e_ucb_vars, alpha=0.5)
 
         # plot max UCB in diff color
-        max_ucb = argmax(e_ucb_mus + e_ucb_vars)
-        max_ucb_x = convert(Array{Float64}, [e_ucb_xs[max_ucb]])
-        max_ucb_mu = convert(Array{Float64}, [e_ucb_mus[max_ucb]])
-        max_ucb_var = convert(Array{Float64}, [e_ucb_vars[max_ucb]])
+        min_ucb = argmin(e_ucb_mus + e_ucb_vars)
+        min_ucb_x = convert(Array{Float64}, [e_ucb_xs[min_ucb]])
+        min_ucb_mu = convert(Array{Float64}, [e_ucb_mus[min_ucb]])
+        min_ucb_var = convert(Array{Float64}, [e_ucb_vars[min_ucb]])
 
         old_obs = length(obs_xs) - 1
         plot!(p, obs_xs[1 : old_obs], obs_ys[1 : old_obs], seriestype = :scatter,  marker = (:circle, 0.4, 8, :yellow))
         plot!(p, obs_xs[old_obs+1 : length(obs_xs)], obs_ys[old_obs+1 : length(obs_xs)], seriestype = :scatter,  marker = (:circle, 0.8, 8, :red))
-        plot!(p, max_ucb_x, max_ucb_mu, yerror=max_ucb_var, alpha=1, color=:red, markerstrokecolor=:red,  seriestype = :scatter,  marker = (:star5, 0.4, 8, :red))
+        plot!(p, min_ucb_x, min_ucb_mu, yerror=min_ucb_var, alpha=1, color=:red, markerstrokecolor=:red,  seriestype = :scatter,  marker = (:star5, 0.4, 8, :red))
 
     end
 
