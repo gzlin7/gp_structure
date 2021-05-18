@@ -8,16 +8,34 @@ functions = Dict("sinusoid"=> x -> 0.20sin(15.7x),
                  "polynomial" => x -> -0.2 * (x - 0.3)^2 * (x - 3.3) * (x - 4.2) * (x - 1.3) * (x - 3.7) * (x + 0.4) * (x - 2.1),
                  "cubic" => x -> 20 * ((x - 0.2)*(x - 0.6)*(x - 1)) + 0.5,
                  "changepoint" => x -> x < 2.0 ? 4(x - 1) ^ 2 : 0.20sin(15.7x),
-                 "airline" => get_airline_dataset
+                 "airline" => get_airline_dataset,
+                 # http://infinity77.net/global_optimization/test_functions_1d.html
+                 "02" => x -> sin(x) + sin(10/3 * x),
+                 "03" => x -> -sum([k * sin((k + 1) * x + k) for k=1:6]),
+                 "04" => x -> -(16*x^2 - 24*x + 5) * exp(-x),
+                 "05" => x -> -(1.4-3*x)*sin(18*x),
+                 "06" => x -> -(x + sin(x)) * exp(-x^2),
+                 "07" => x -> sin(x) + sin(10/3 * x) + log(x) - 0.84*x + 3,
+                 "08" => x -> -sum([k * cos((k + 1) * x + k) for k=1:6]),
+                 "09" => x ->
                  )
 
- fn_to_obs = Dict("sinusoid"=> 100,
-                  "linear"=> 50,
-                  "quadratic" => 50,
-                  "polynomial" => 100,
-                  "cubic" => 100,
-                  "changepoint" => 100,
-                  "airline" => 100
+bounds_default = (0.0,0.4)
+bounds =  Dict( "02" =>  (2.7,7.5),
+                "03" => (-10, 10),
+                "04" => (1.9, 3.9),
+                "05" => (0, 1.2),
+                "06" => (-10, 10),
+                "07" => (2.7, 7.5),
+                "08" => (-10, 10),
+                "09" => (3.1, 20.4)
+                 )
+
+n_obs_default = 100
+fn_to_obs = Dict("linear"=> 50,
+                 "quadratic" => 50,
+                 "03" => 500,
+                 "06" => 500
                   )
 
 
@@ -33,12 +51,13 @@ function run_inference(dataset_name, animation_name, n_particles, sequential, f,
 
     else
         # Generate data
-        xs_train = collect(LinRange(0.0,4.0,n_obs))
+        data_bounds = haskey(bounds, dataset_name) ? bounds[dataset_name] : bounds_default
+        xs_train = collect(LinRange(data_bounds[1], data_bounds[2], n_obs))
         sort!(xs_train)
         ys_train = deepcopy(xs_train)
         @. ys_train = f.(xs_train)
 
-        xs_test = [uniform(0.0,4.0) for t=1:n_obs]
+        xs_test = [uniform(data_bounds[1], data_bounds[2]) for t=1:n_obs]
         sort!(xs_test)
         ys_test = deepcopy(xs_test)
         @. ys_test = f.(xs_test)
@@ -83,7 +102,8 @@ function run_inference(dataset_name, animation_name, n_particles, sequential, f,
     end
 end
 
-dataset_names = ["changepoint", "polynomial", "sinusoid", "quadratic", "linear","airline", "quadratic"]
+# dataset_names = ["changepoint", "polynomial", "sinusoid", "quadratic", "linear","airline", "quadratic"]
+dataset_names = ["06"]
 # dataset_names = ["quadratic"]
 n_particles_all = [50, 100]
 
@@ -101,7 +121,7 @@ n_particles_all = [50, 100]
 
 for i=1:length(dataset_names)
     dataset_name = dataset_names[i]
-    n_observations = fn_to_obs[dataset_name]
+    n_observations = haskey(fn_to_obs, dataset_name) ? fn_to_obs[dataset_name] : n_obs_default
 
     # # run sequential prediction
     for n_particles in n_particles_all

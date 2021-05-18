@@ -43,7 +43,6 @@ function particle_filter_acquisition(xs::Vector{Float64}, ys::Vector{Float64}, n
         # if effective_sample_size(state) < 0.5 * n_particles
         # Perform residual resampling, pruning low-weight particles
         if (mod(t,10) == 0)
-            println("weights: ", sort!(get_norm_weights(state)))
             pf_resample!(state, :multinomial)
             # Perform a rejuvenation move on past choices
             pf_rejuvenate!(state, mh, (subtree_proposal, (), subtree_involution))

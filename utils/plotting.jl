@@ -80,7 +80,7 @@ function make_animation_acquisition(animation_name, anim_traj, n_particles, xs_t
         k = 0.8
 
         # plot observations
-        p = plot(xs_train, ys_train, title="$obs Observations, $n_particles Particles ", ylim=(-2, 5), legend=false, linecolor=:red)
+        p = plot(xs_train, ys_train, title="$obs Observations, $n_particles Particles ", xlim= (minimum(xs_train), maximum(xs_train)), ylim=(minimum(ys_train)-1, maximum(ys_train)+1), legend=false, linecolor=:red)
 
         # get indices of the top n particles
         # weights = [vals[i][3] for i=1:length(vals)]
