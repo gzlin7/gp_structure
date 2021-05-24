@@ -1,5 +1,5 @@
 include("sequential.jl")
-include("acquisition_exploration.jl")
+include("acquisition_exploration_AL.jl")
 
 
 functions = Dict("sinusoid"=> x -> 0.20sin(15.7x),
@@ -16,9 +16,7 @@ functions = Dict("sinusoid"=> x -> 0.20sin(15.7x),
                  "05" => x -> -(1.4-3*x)*sin(18*x),
                  "06" => x -> -(x + sin(x)) * exp(-x^2),
                  "07" => x -> sin(x) + sin(10/3 * x) + log(x) - 0.84*x + 3,
-                 "08" => x -> -sum([k * cos((k + 1) * x + k) for k=1:6]),
-                 "09" => x ->
-                 )
+                 "08" => x -> -sum([k * cos((k + 1) * x + k) for k=1:6])                 )
 
 bounds_default = (0.0,0.4)
 bounds =  Dict( "02" =>  (2.7,7.5),
@@ -40,7 +38,7 @@ fn_to_obs = Dict("linear"=> 50,
 
 
 
-function run_inference(dataset_name, animation_name, n_particles, sequential, f, n_obs)
+function run_inference(dataset_name, animation_name, n_particles, sequential, f, n_obs_plotting, budget, random)
     # load the dataset
     if (dataset_name == "airline")
         (xs, ys) = f()
@@ -52,12 +50,12 @@ function run_inference(dataset_name, animation_name, n_particles, sequential, f,
     else
         # Generate data
         data_bounds = haskey(bounds, dataset_name) ? bounds[dataset_name] : bounds_default
-        xs_train = collect(LinRange(data_bounds[1], data_bounds[2], n_obs))
+        xs_train = collect(LinRange(data_bounds[1], data_bounds[2], n_obs_plotting))
         sort!(xs_train)
         ys_train = deepcopy(xs_train)
         @. ys_train = f.(xs_train)
 
-        xs_test = [uniform(data_bounds[1], data_bounds[2]) for t=1:n_obs]
+        xs_test = [uniform(data_bounds[1], data_bounds[2]) for t=1:n_obs_plotting]
         sort!(xs_test)
         ys_test = deepcopy(xs_test)
         @. ys_test = f.(xs_test)
@@ -97,15 +95,15 @@ function run_inference(dataset_name, animation_name, n_particles, sequential, f,
     else
         x_obs_traj = Float64[]
         y_obs_traj = Float64[]
-        @time state = particle_filter_acquisition(xs_train, ys_train, n_particles, pf_callback, anim_traj, x_obs_traj, y_obs_traj, ucb_fn)
+        @time state = particle_filter_acquisition_AL(xs_train, ys_train, n_particles, pf_callback, anim_traj, x_obs_traj, y_obs_traj, budget, random)
         make_animation_acquisition(animation_name, anim_traj, n_particles, xs_train, ys_train, xs_test, ys_test, x_obs_traj, y_obs_traj)
     end
 end
 
 # dataset_names = ["changepoint", "polynomial", "sinusoid", "quadratic", "linear","airline", "quadratic"]
-dataset_names = ["06"]
+dataset_names = ["05", "02", "airline"]
 # dataset_names = ["quadratic"]
-n_particles_all = [50, 100]
+n_particles_all = [100]
 
 
 # n_particles = 50
@@ -121,18 +119,22 @@ n_particles_all = [50, 100]
 
 for i=1:length(dataset_names)
     dataset_name = dataset_names[i]
-    n_observations = haskey(fn_to_obs, dataset_name) ? fn_to_obs[dataset_name] : n_obs_default
+    n_obs_plotting = haskey(fn_to_obs, dataset_name) ? fn_to_obs[dataset_name] : n_obs_default
+    budget = 13
 
     # # run sequential prediction
     for n_particles in n_particles_all
-        sequential = true
-        animation_name = "sequential_" * dataset_name * "_" * string(n_particles)
+        # sequential = true
+        # animation_name = "sequential_" * dataset_name * "_" * string(n_particles)
 
         # run acquisition prediction
         sequential = false
-        animation_name = "acquisition_" * dataset_name * "_" * string(n_particles)
-        animation_name = "acquisition_" * dataset_name
+        # random = true
 
-        run_inference(dataset_name, animation_name, n_particles, sequential, functions[dataset_name], n_observations)
+        animation_name_rand = dataset_name * "_rand_" * string(n_particles)
+        animation_name_al = dataset_name * "_active_" * string(n_particles)
+
+        run_inference(dataset_name, animation_name_rand, n_particles, sequential, functions[dataset_name], n_obs_plotting, budget, true)
+        run_inference(dataset_name, animation_name_al, n_particles, sequential, functions[dataset_name], n_obs_plotting, budget, false)
     end
 end
