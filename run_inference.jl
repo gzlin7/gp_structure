@@ -16,7 +16,8 @@ functions = Dict("sinusoid"=> x -> 0.20sin(15.7x),
                  "05" => x -> -(1.4-3*x)*sin(18*x),
                  "06" => x -> -(x + sin(x)) * exp(-x^2),
                  "07" => x -> sin(x) + sin(10/3 * x) + log(x) - 0.84*x + 3,
-                 "08" => x -> -sum([k * cos((k + 1) * x + k) for k=1:6])                 )
+                 "08" => x -> -sum([k * cos((k + 1) * x + k) for k=1:6]) ,
+                 "14" => x -> -exp(-x) * sin(2*pi*x)               )
 
 bounds_default = (0.0,0.4)
 bounds =  Dict( "02" =>  (2.7,7.5),
@@ -26,7 +27,8 @@ bounds =  Dict( "02" =>  (2.7,7.5),
                 "06" => (-10, 10),
                 "07" => (2.7, 7.5),
                 "08" => (-10, 10),
-                "09" => (3.1, 20.4)
+                "09" => (3.1, 20.4),
+                "14" => (0,4)
                  )
 
 n_obs_default = 100
@@ -102,6 +104,7 @@ end
 
 # dataset_names = ["changepoint", "polynomial", "sinusoid", "quadratic", "linear","airline", "quadratic"]
 dataset_names = ["05", "02", "airline"]
+dataset_names = ["airline","05"]
 # dataset_names = ["quadratic"]
 n_particles_all = [100]
 
@@ -120,7 +123,7 @@ n_particles_all = [100]
 for i=1:length(dataset_names)
     dataset_name = dataset_names[i]
     n_obs_plotting = haskey(fn_to_obs, dataset_name) ? fn_to_obs[dataset_name] : n_obs_default
-    budget = 13
+    budget = 20
 
     # # run sequential prediction
     for n_particles in n_particles_all
@@ -131,8 +134,10 @@ for i=1:length(dataset_names)
         sequential = false
         # random = true
 
-        animation_name_rand = dataset_name * "_rand_" * string(n_particles)
-        animation_name_al = dataset_name * "_active_" * string(n_particles)
+        char = "y"
+
+        animation_name_rand = char * dataset_name * "_rand_" * string(n_particles)
+        animation_name_al = char * dataset_name * "_active_" * string(n_particles)
 
         run_inference(dataset_name, animation_name_rand, n_particles, sequential, functions[dataset_name], n_obs_plotting, budget, true)
         run_inference(dataset_name, animation_name_al, n_particles, sequential, functions[dataset_name], n_obs_plotting, budget, false)

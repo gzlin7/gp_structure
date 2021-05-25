@@ -105,7 +105,7 @@ function make_animation_acquisition(animation_name, anim_traj, n_particles, xs_t
                 e_ucb_mus[j] += mu * weight
             end
         end
-        plot!(p, e_ucb_xs, e_ucb_mus, yerror=e_ucb_vars, alpha=0.5)
+        # plot!(p, e_ucb_xs, e_ucb_mus, yerror=e_ucb_vars, alpha=0.5)
 
         # plot max UCB in diff color
         min_ucb = argmin(e_ucb_mus + e_ucb_vars)
@@ -116,7 +116,7 @@ function make_animation_acquisition(animation_name, anim_traj, n_particles, xs_t
         old_obs = length(obs_xs) - 1
         plot!(p, obs_xs[1 : old_obs], obs_ys[1 : old_obs], seriestype = :scatter,  marker = (:circle, 0.4, 8, :yellow))
         plot!(p, obs_xs[old_obs+1 : length(obs_xs)], obs_ys[old_obs+1 : length(obs_xs)], seriestype = :scatter,  marker = (:circle, 0.8, 8, :red))
-        plot!(p, min_ucb_x, min_ucb_mu, yerror=min_ucb_var, alpha=1, color=:red, markerstrokecolor=:red,  seriestype = :scatter,  marker = (:star5, 0.4, 8, :red))
+        # plot!(p, min_ucb_x, min_ucb_mu, yerror=min_ucb_var, alpha=1, color=:red, markerstrokecolor=:red,  seriestype = :scatter,  marker = (:star5, 0.4, 8, :red))
 
     end
 

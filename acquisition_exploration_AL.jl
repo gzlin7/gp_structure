@@ -49,13 +49,8 @@ function particle_filter_acquisition_AL(xs::Vector{Float64}, ys::Vector{Float64}
         end
 
         # select next observation point
-        if (t > n_explore)
-            if random
-                potential_xs_idx = rand(1:length(potential_xs))
-
-            else
-                potential_xs_idx = get_next_obs_x(state, potential_xs, obs_xs, obs_ys)
-            end
+        if (t > n_explore) && !random
+            potential_xs_idx = get_next_obs_x(state, potential_xs, obs_xs, obs_ys)
         else
             potential_xs_idx = rand(1:length(potential_xs))
         end
@@ -83,6 +78,7 @@ end
 
 function get_next_obs_x(state, intervention_locs, past_obs_x, past_obs_y)
     n_traces = 50
+    m = 50
     weights = get_norm_weights(state)
 
     # Continuous: use Optim to find next x
@@ -106,10 +102,14 @@ function get_next_obs_x(state, intervention_locs, past_obs_x, past_obs_y)
             (conditional_mu, conditional_cov_matrix) = compute_predictive(
                 covariance_fn, noise, past_obs_x, past_obs_y, [intervention_x])
             mu, var = conditional_mu[1], conditional_cov_matrix[1,1]
-            outcome = mu
+            m_outcomes = [normal(mu, var) for t=1:m]
 
-            log_Py_g = predictive_ll(g, noise, past_obs_x, past_obs_y, [intervention_x], [outcome])
-            info_gain += exp(log_Py_g) * (log_Py_g + log(P_g))
+            approx_info_gain = 0
+            for outcome in m_outcomes
+                log_Py_g = predictive_ll(g, noise, past_obs_x, past_obs_y, [intervention_x], [outcome])
+                approx_info_gain += (log_Py_g + log(P_g))
+            end
+            info_gain += 1/m * approx_info_gain
         end
         # negative to return max, since minimization
         return -info_gain
