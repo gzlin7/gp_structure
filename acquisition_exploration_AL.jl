@@ -3,6 +3,7 @@ include("utils/unfold_model.jl")
 include("utils/plotting.jl")
 using GenParticleFilters
 using Optim
+using StatsBase
 @load_generated_functions()
 
 # acquisition functions
@@ -76,38 +77,71 @@ function particle_filter_acquisition_AL(xs::Vector{Float64}, ys::Vector{Float64}
     return state
 end
 
+function sample_traces(state, n_samples)
+    state_weights = get_norm_weights(state)
+    state_traces = state.traces
+    # sample n_samples traces without replacement
+    sample_idxes = StatsBase.knuths_sample!([i for i=1:length(state_traces)], [1 for i=1:n_samples])
+    # get weights and traces
+    traces = []
+    weights = []
+    sum_weights = 0
+    for i in sample_idxes
+        push!(traces, state_traces[i])
+        weight = state_weights[i]
+        sum_weights += weight
+        push!(weights, weight)
+    end
+    # renormalize weights
+    weights = weights / sum_weights
+    return (traces, weights)
+end
+
+function get_Py_given_trace(theta, weight, noise, past_obs_x, past_obs_y, intervention_x, y)
+    Py_theta = exp(predictive_ll(theta, noise, past_obs_x, past_obs_y, [intervention_x], [y]))
+    return Py_theta * weight
+end
+
+function get_Py(traces, weights, past_obs_x, past_obs_y, intervention_x, y)
+    p_y = 0
+    for i=1:length(traces)
+        trace = traces[i]
+        theta = get_retval(trace)[1]
+        noise = trace[:noise]
+        weight = weights[i]
+        p_y += get_Py_given_trace(theta, weight, noise, past_obs_x, past_obs_y, intervention_x, y)
+    end
+    return p_y
+end
+
 function get_next_obs_x(state, intervention_locs, past_obs_x, past_obs_y)
     n_traces = 50
     m = 50
-    weights = get_norm_weights(state)
 
-    # Continuous: use Optim to find next x
+    # sample traces (thetas)
+    ret = sample_traces(state, n_traces)
+    traces = ret[1]
+    weights = ret[2]
+
     function get_information_gain(intervention_x)
-        # TODO: verify unweighted trace sampling or switch to weighting
-        traces = sample_unweighted_traces(state, n_traces)
         info_gain = 0
-
-        # for g in G
+        # for each theta
         for i=1:n_traces
             trace = traces[i]
-            covariance_fn = get_retval(trace)[1]
+            theta = get_retval(trace)[1]
             noise = trace[:noise]
             weight = weights[i]
 
-            g = covariance_fn
-            P_g = weight
-
-            # TODO: integrate over outcomes using MC sampling
-            # for now just assume BEST y?
             (conditional_mu, conditional_cov_matrix) = compute_predictive(
-                covariance_fn, noise, past_obs_x, past_obs_y, [intervention_x])
+                theta, noise, past_obs_x, past_obs_y, [intervention_x])
             mu, var = conditional_mu[1], conditional_cov_matrix[1,1]
             m_outcomes = [normal(mu, var) for t=1:m]
 
             approx_info_gain = 0
-            for outcome in m_outcomes
-                log_Py_g = predictive_ll(g, noise, past_obs_x, past_obs_y, [intervention_x], [outcome])
-                approx_info_gain += (log_Py_g + log(P_g))
+            # for each y
+            for y in m_outcomes
+                py_trace = get_Py_given_trace(theta, weight, noise, past_obs_x, past_obs_y, intervention_x, y)
+                approx_info_gain += log(py_trace / get_Py(traces, weights, past_obs_x, past_obs_y, intervention_x, y))
             end
             info_gain += 1/m * approx_info_gain
         end
