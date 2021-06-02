@@ -27,6 +27,7 @@ function particle_filter_acquisition_AL(xs::Vector{Float64}, ys::Vector{Float64}
     obs_xs = [xs[1]]
     obs_ys = [ys[1]]
     obs_choices = [choicemap((:state => 1 => :x, xs[1]), (:state => 1 => :y, ys[1]))]
+
     # keep track of xs we have not evaluated yet
     potential_xs = deepcopy(xs)
     deleteat!(potential_xs, 1)
@@ -116,16 +117,16 @@ function get_dist_traces(traces, weights, past_obs_x, past_obs_y, intervention_x
 end
 
 # P(Y|theta)
-function calc_prob_y_given_th(y, mu_cov, theta_idx)
+function calc_log_prob_y_given_th(y, mu_cov, theta_idx)
     (conditional_mu, conditional_cov_matrix) = mu_cov[theta_idx]
-    return exp(logpdf(mvnormal, [y], conditional_mu, conditional_cov_matrix))
+    return logpdf(mvnormal, [y], conditional_mu, conditional_cov_matrix)
 end
 
 # P(Y) over all thetas
-function calc_prob_y(mu_cov, y)
+function calc_prob_y(mu_cov, y, weights)
     p_y = 0
     for i=1:length(mu_cov)
-        p_y += calc_prob_y_given_th(y, mu_cov, i)
+        p_y += exp(calc_log_prob_y_given_th(y, mu_cov, i)) * weights[i]
     end
     return p_y
 end
@@ -154,10 +155,10 @@ function get_next_obs_x(state, intervention_locs, past_obs_x, past_obs_y)
             approx_info_gain = 0
             # for each y
             for y in m_outcomes
-                py_trace = calc_prob_y_given_th(y, mu_cov, i)
-                approx_info_gain += log(p_theta * py_trace / calc_prob_y(mu_cov, y))
+                log_py_trace = calc_log_prob_y_given_th(y, mu_cov, i)
+                approx_info_gain += log(p_theta) + log_py_trace - log(calc_prob_y(mu_cov, y, weights))
             end
-            info_gain += 1/m * approx_info_gain
+            info_gain += p_theta * 1/m * approx_info_gain
         end
         # negative to return max, since minimization
         return -info_gain

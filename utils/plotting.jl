@@ -68,6 +68,8 @@ function make_animation_acquisition(animation_name, anim_traj, n_particles, xs_t
         push!(sorted_obs, obs)
     end
 
+    sorted_obs = filter!(x->x≠"e_mse" && x≠"e_pred_ll", sorted_obs)
+
     anim = @animate for obs in sort!(sorted_obs)
         vals = anim_traj[obs]
         obs_xs = x_obs_traj[1:obs]
@@ -121,4 +123,13 @@ function make_animation_acquisition(animation_name, anim_traj, n_particles, xs_t
     end
 
     gif(anim, "animations/acquisition/" * animation_name * ".gif", fps = 1)
+end
+
+function make_accuracy_plot(plot_name, anim_traj)
+    e_mse = anim_traj["e_mse"]
+    e_pred_ll = anim_traj["e_pred_ll"]
+    x = 1:length(e_mse)
+    p = plot(x, e_mse, label="e_mse", legend=:bottomright, title=plot_name, xlabel="no. observations")
+    plot!(p, x, e_pred_ll, label="e_pred_ll")
+    savefig(p, "animations/acquisition/plots/" * plot_name)
 end
