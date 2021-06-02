@@ -77,6 +77,7 @@ function particle_filter_acquisition_AL(xs::Vector{Float64}, ys::Vector{Float64}
     return state
 end
 
+# return n_samples (sample unweighted) from state, with corresponding normalized weight array
 function sample_traces(state, n_samples)
     state_weights = get_norm_weights(state)
     state_traces = state.traces
@@ -97,53 +98,66 @@ function sample_traces(state, n_samples)
     return (traces, weights)
 end
 
-function get_Py_given_trace(theta, weight, noise, past_obs_x, past_obs_y, intervention_x, y)
-    Py_theta = exp(predictive_ll(theta, noise, past_obs_x, past_obs_y, [intervention_x], [y]))
-    return Py_theta * weight
-end
-
-function get_Py(traces, weights, past_obs_x, past_obs_y, intervention_x, y)
-    p_y = 0
+# return array of (conditional_mu, conditional_cov_matrix) for each covariance_fn in trace (in order)
+function get_dist_traces(traces, weights, past_obs_x, past_obs_y, intervention_x)
+    mu_cov = []
     for i=1:length(traces)
         trace = traces[i]
         theta = get_retval(trace)[1]
         noise = trace[:noise]
         weight = weights[i]
-        p_y += get_Py_given_trace(theta, weight, noise, past_obs_x, past_obs_y, intervention_x, y)
+
+        (conditional_mu, conditional_cov_matrix) = compute_predictive(
+            theta, noise, past_obs_x, past_obs_y, [intervention_x])
+        # mu, var = conditional_mu[1], conditional_cov_matrix[1,1]
+        push!(mu_cov, (conditional_mu, conditional_cov_matrix))
+    end
+    return mu_cov
+end
+
+# P(Y|theta)
+function calc_prob_y_given_th(y, mu_cov, theta_idx)
+    (conditional_mu, conditional_cov_matrix) = mu_cov[theta_idx]
+    return exp(logpdf(mvnormal, [y], conditional_mu, conditional_cov_matrix))
+end
+
+# P(Y) over all thetas
+function calc_prob_y(mu_cov, y)
+    p_y = 0
+    for i=1:length(mu_cov)
+        p_y += calc_prob_y_given_th(y, mu_cov, i)
     end
     return p_y
 end
 
 function get_next_obs_x(state, intervention_locs, past_obs_x, past_obs_y)
     n_traces = 50
-    m = 50
+    m = 30
 
     # sample traces (thetas)
     ret = sample_traces(state, n_traces)
     traces = ret[1]
     weights = ret[2]
 
+
     function get_information_gain(intervention_x)
         info_gain = 0
-        # for each theta
-        for i=1:n_traces
-            trace = traces[i]
-            theta = get_retval(trace)[1]
-            noise = trace[:noise]
-            weight = weights[i]
+        mu_cov = get_dist_traces(traces, weights, past_obs_x, past_obs_y, intervention_x)
 
-            (conditional_mu, conditional_cov_matrix) = compute_predictive(
-                theta, noise, past_obs_x, past_obs_y, [intervention_x])
+        # for each theta
+        for i=1:length(mu_cov)
+            (conditional_mu, conditional_cov_matrix) = mu_cov[i]
             mu, var = conditional_mu[1], conditional_cov_matrix[1,1]
             m_outcomes = [normal(mu, var) for t=1:m]
+            p_theta = weights[i]
 
             approx_info_gain = 0
             # for each y
             for y in m_outcomes
-                py_trace = get_Py_given_trace(theta, weight, noise, past_obs_x, past_obs_y, intervention_x, y)
-                approx_info_gain += log(py_trace / get_Py(traces, weights, past_obs_x, past_obs_y, intervention_x, y))
+                py_trace = calc_prob_y_given_th(y, mu_cov, i)
+                approx_info_gain += log(py_trace / calc_prob_y(mu_cov, y))
             end
-            info_gain += 1/m * approx_info_gain
+            info_gain += p_theta * 1/m * approx_info_gain
         end
         # negative to return max, since minimization
         return -info_gain

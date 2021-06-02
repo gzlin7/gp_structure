@@ -123,7 +123,7 @@ n_particles_all = [100]
 for i=1:length(dataset_names)
     dataset_name = dataset_names[i]
     n_obs_plotting = haskey(fn_to_obs, dataset_name) ? fn_to_obs[dataset_name] : n_obs_default
-    budget = 15
+    budget = 25
 
     # # run sequential prediction
     for n_particles in n_particles_all
@@ -134,7 +134,7 @@ for i=1:length(dataset_names)
         sequential = false
         # random = true
 
-        char = "g"
+        char = "i"
 
         animation_name_rand = char * dataset_name * "_rand_" * string(n_particles)
         animation_name_al = char * dataset_name * "_active_" * string(n_particles)
