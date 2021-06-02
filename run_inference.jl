@@ -103,7 +103,7 @@ function run_inference(dataset_name, animation_name, n_particles, sequential, f,
 end
 
 # dataset_names = ["changepoint", "polynomial", "sinusoid", "quadratic", "linear","airline", "quadratic"]
-dataset_names = ["05", "02", "airline"]
+dataset_names = [ "02", "airline"]
 # dataset_names = ["airline","05"]
 # dataset_names = ["quadratic"]
 n_particles_all = [100]
@@ -123,7 +123,7 @@ n_particles_all = [100]
 for i=1:length(dataset_names)
     dataset_name = dataset_names[i]
     n_obs_plotting = haskey(fn_to_obs, dataset_name) ? fn_to_obs[dataset_name] : n_obs_default
-    budget = 25
+    budget = 15
 
     # # run sequential prediction
     for n_particles in n_particles_all
@@ -134,12 +134,12 @@ for i=1:length(dataset_names)
         sequential = false
         # random = true
 
-        char = "i"
+        char = "j"
 
         animation_name_rand = char * dataset_name * "_rand_" * string(n_particles)
         animation_name_al = char * dataset_name * "_active_" * string(n_particles)
 
-        run_inference(dataset_name, animation_name_rand, n_particles, sequential, functions[dataset_name], n_obs_plotting, budget, true)
-        # run_inference(dataset_name, animation_name_al, n_particles, sequential, functions[dataset_name], n_obs_plotting, budget, false)
+        # run_inference(dataset_name, animation_name_rand, n_particles, sequential, functions[dataset_name], n_obs_plotting, budget, true)
+        run_inference(dataset_name, animation_name_al, n_particles, sequential, functions[dataset_name], n_obs_plotting, budget, false)
     end
 end

@@ -155,9 +155,9 @@ function get_next_obs_x(state, intervention_locs, past_obs_x, past_obs_y)
             # for each y
             for y in m_outcomes
                 py_trace = calc_prob_y_given_th(y, mu_cov, i)
-                approx_info_gain += log(py_trace / calc_prob_y(mu_cov, y))
+                approx_info_gain += log(p_theta * py_trace / calc_prob_y(mu_cov, y))
             end
-            info_gain += p_theta * 1/m * approx_info_gain
+            info_gain += 1/m * approx_info_gain
         end
         # negative to return max, since minimization
         return -info_gain
