@@ -52,6 +52,9 @@ function particle_filter_acquisition_AL(xs::Vector{Float64}, ys::Vector{Float64}
         deleteat!(potential_xs, potential_xs_idx)
 
         next_obs_idx = findfirst(isequal(next_x), xs)
+        if (t < 3)
+            next_obs_idx = (t == 1) ? 1 : length(xs)
+        end
         push!(obs_idx, next_obs_idx)
         push!(obs_xs, xs[next_obs_idx])
         push!(obs_ys, ys[next_obs_idx])
@@ -152,18 +155,18 @@ function get_next_obs_x(state, intervention_locs, past_obs_x, past_obs_y)
             end
             info_gain += p_theta * 1/m * approx_info_gain
         end
-        # negative to return max, since minimization
-        return -info_gain
+        # add negative to return max if minimization
+        return info_gain
     end
 
     # plot sparse grid of information gain
-    n_locs = min(50, length(intervention_locs))
+    n_locs = min(30, length(intervention_locs))
     xs_info_plot = intervention_locs[1:length(intervention_locs)÷n_locs:end]
     info_gains_plot = [get_information_gain(x) for x in xs_info_plot]
 
     # argmax_loc = Optim.minimizer(optimize(get_information_gain,  minimum(intervention_locs), maximum(intervention_locs)))
     # return (argmin(abs.(intervention_locs .- argmax_loc)), xs_info_plot, info_gains_plot)
-    best_loc = xs_info_plot[argmin(info_gains_plot)]
+    best_loc = xs_info_plot[argmax(info_gains_plot)]
     best_loc_idx = findfirst(x->x==best_loc, intervention_locs)
     return (best_loc_idx, xs_info_plot, info_gains_plot)
 end

@@ -1,5 +1,6 @@
 include("sequential.jl")
-include("acquisition_exploration_AL.jl")
+# include("acquisition_exploration_AL.jl")
+include("acquisition_exploration_testing.jl")
 
 
 functions = Dict("sinusoid"=> x -> 0.20sin(15.7x),
@@ -111,6 +112,7 @@ function run_inference(dataset_name, animation_name, n_particles, sequential, f,
         x_obs_traj = Float64[]
         y_obs_traj = Float64[]
         @time state = particle_filter_acquisition_AL(xs_train, ys_train, n_particles, pf_callback, anim_traj, x_obs_traj, y_obs_traj, budget, random)
+        return (animation_name, anim_traj, n_particles, xs_train, ys_train, xs_test, ys_test, x_obs_traj, y_obs_traj)
         make_animation_acquisition(animation_name, anim_traj, n_particles, xs_train, ys_train, xs_test, ys_test, x_obs_traj, y_obs_traj)
         plot_name = animation_name * "_acc"
         make_accuracy_plot(plot_name, anim_traj)
@@ -118,8 +120,8 @@ function run_inference(dataset_name, animation_name, n_particles, sequential, f,
 end
 
 # dataset_names = ["changepoint", "polynomial", "sinusoid", "quadratic", "linear","airline", "quadratic"]
-# dataset_names = ["05", "02", "airline"]
 dataset_names = ["21", "02", "05", "10"]
+dataset_names = ["04"]
 # dataset_names = ["quadratic"]
 n_particles_all = [100]
 
@@ -143,16 +145,16 @@ for i=1:length(dataset_names)
         animation_name_al = char * dataset_name * "_active_" * string(n_particles)
 
         # run_inference(dataset_name, animation_name_rand, n_particles, sequential, functions[dataset_name], n_obs_plotting, budget, true)
-        run_inference(dataset_name, animation_name_al, n_particles, sequential, functions[dataset_name], n_obs_plotting, budget, false)
+        # run_inference(dataset_name, animation_name_al, n_particles, sequential, functions[dataset_name], n_obs_plotting, budget, false)
     end
 end
 
 
 # test ploting
-# dataset_name, animation_name_al, n_particles, n_obs_plotting, budget = "05", "test_ploting_anim", 100, 100, 20
-# ret =  run_inference(dataset_name, animation_name_al, n_particles, false, functions[dataset_name], n_obs_plotting, budget, false)
-# animation_name, anim_traj, n_particles, xs_train, ys_train, xs_test, ys_test, x_obs_traj, y_obs_traj = ret
-# include("acquisition_exploration_AL.jl");
-# make_animation_acquisition(animation_name, anim_traj, n_particles, xs_train, ys_train, xs_test, ys_test, x_obs_traj, y_obs_traj)
-# plot_name = animation_name * "_acc"
-# make_accuracy_plot(plot_name, anim_traj)
+dataset_name, animation_name_al, n_particles, n_obs_plotting, budget = "04", "test_ploting_anim", 100, 100, 20
+ret =  run_inference(dataset_name, animation_name_al, n_particles, false, functions[dataset_name], n_obs_plotting, budget, false)
+animation_name, anim_traj, n_particles, xs_train, ys_train, xs_test, ys_test, x_obs_traj, y_obs_traj = ret
+include("acquisition_exploration_AL.jl");
+make_animation_acquisition(animation_name, anim_traj, n_particles, xs_train, ys_train, xs_test, ys_test, x_obs_traj, y_obs_traj)
+plot_name = animation_name * "_acc"
+make_accuracy_plot(plot_name, anim_traj)
