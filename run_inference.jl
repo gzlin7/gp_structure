@@ -17,7 +17,9 @@ functions = Dict("sinusoid"=> x -> 0.20sin(15.7x),
                  "06" => x -> -(x + sin(x)) * exp(-x^2),
                  "07" => x -> sin(x) + sin(10/3 * x) + log(x) - 0.84*x + 3,
                  "08" => x -> -sum([k * cos((k + 1) * x + k) for k=1:6]) ,
-                 "14" => x -> -exp(-x) * sin(2*pi*x)               )
+                 "10" => x -> -x * sin(x),
+                 "14" => x -> -exp(-x) * sin(2*pi*x),
+                 "21" => x -> x * sin(x) + x * cos(2x)             )
 
 bounds_default = (0.0,0.4)
 bounds =  Dict( "02" =>  (2.7,7.5),
@@ -28,7 +30,9 @@ bounds =  Dict( "02" =>  (2.7,7.5),
                 "07" => (2.7, 7.5),
                 "08" => (-10, 10),
                 "09" => (3.1, 20.4),
-                "14" => (0,4)
+                "10" => (0,10),
+                "14" => (0,4),
+                "21" => (0,10)
                  )
 
 n_obs_default = 100
@@ -68,7 +72,7 @@ function run_inference(dataset_name, animation_name, n_particles, sequential, f,
     # set seed
     Random.seed!(1)
 
-    function pf_callback(state, xs_obs, ys_obs, anim_traj, t)
+    function pf_callback(state, xs_obs, ys_obs, anim_traj, t, xs_info_plot, info_plot)
         # calculate E[MSE]
         n_particles = length(state.traces)
         e_mse = 0
@@ -91,6 +95,9 @@ function run_inference(dataset_name, animation_name, n_particles, sequential, f,
             e_pred_ll += pred_ll * weights[i]
             push!(anim_traj[t], [covariance_fn, noise, weights[i], mse, pred_ll])
         end
+        # store information gain plotting info for each timestep
+        push!(anim_traj[t], [xs_info_plot, info_plot])
+        # store E[MSE] and E[Predictive Likelihood]
         println("E[mse]: $e_mse, E[predictive log likelihood]: $e_pred_ll")
         push!(anim_traj["e_mse"], e_mse)
         push!(anim_traj["e_pred_ll"], e_pred_ll)
@@ -112,20 +119,9 @@ end
 
 # dataset_names = ["changepoint", "polynomial", "sinusoid", "quadratic", "linear","airline", "quadratic"]
 # dataset_names = ["05", "02", "airline"]
-dataset_names = ["05"]
+dataset_names = ["21", "02", "05", "10"]
 # dataset_names = ["quadratic"]
 n_particles_all = [100]
-
-
-# n_particles = 50
-# dataset_name = "quadratic"
-# sequential = true
-# animation_name = "sequential_" * dataset_name * "_" * string(n_particles)
-#
-# ret = run_inference(dataset_name, animation_name, n_particles, sequential, functions[dataset_name], n_observations)
-# @unpack animation_name, anim_traj, n_particles, xs_train, ys_train, xs_test, ys_test, x_obs_traj, y_obs_traj = ret;
-#
-# make_animation_acquisition(animation_name, anim_traj, n_particles, xs_train, ys_train, xs_test, ys_test, x_obs_traj, y_obs_traj)
 
 
 for i=1:length(dataset_names)
@@ -140,14 +136,23 @@ for i=1:length(dataset_names)
 
         # run acquisition prediction
         sequential = false
-        # random = true
 
         char = "m"
 
         animation_name_rand = char * dataset_name * "_rand_" * string(n_particles)
         animation_name_al = char * dataset_name * "_active_" * string(n_particles)
 
-        run_inference(dataset_name, animation_name_rand, n_particles, sequential, functions[dataset_name], n_obs_plotting, budget, true)
+        # run_inference(dataset_name, animation_name_rand, n_particles, sequential, functions[dataset_name], n_obs_plotting, budget, true)
         run_inference(dataset_name, animation_name_al, n_particles, sequential, functions[dataset_name], n_obs_plotting, budget, false)
     end
 end
+
+
+# test ploting
+# dataset_name, animation_name_al, n_particles, n_obs_plotting, budget = "05", "test_ploting_anim", 100, 100, 20
+# ret =  run_inference(dataset_name, animation_name_al, n_particles, false, functions[dataset_name], n_obs_plotting, budget, false)
+# animation_name, anim_traj, n_particles, xs_train, ys_train, xs_test, ys_test, x_obs_traj, y_obs_traj = ret
+# include("acquisition_exploration_AL.jl");
+# make_animation_acquisition(animation_name, anim_traj, n_particles, xs_train, ys_train, xs_test, ys_test, x_obs_traj, y_obs_traj)
+# plot_name = animation_name * "_acc"
+# make_accuracy_plot(plot_name, anim_traj)

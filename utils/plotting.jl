@@ -68,7 +68,10 @@ function make_animation_acquisition(animation_name, anim_traj, n_particles, xs_t
         push!(sorted_obs, obs)
     end
 
-    sorted_obs = filter!(x->x≠"e_mse" && x≠"e_pred_ll", sorted_obs)
+    x_min, x_max = minimum(xs_train), maximum(xs_train)
+    y_min, y_max = minimum(ys_train), maximum(ys_train)
+
+    sorted_obs = filter!(x->x != "e_mse" && x != "e_pred_ll", sorted_obs)
 
     anim = @animate for obs in sort!(sorted_obs)
         vals = anim_traj[obs]
@@ -76,13 +79,16 @@ function make_animation_acquisition(animation_name, anim_traj, n_particles, xs_t
         obs_ys = y_obs_traj[1:obs]
         pred_xs = xs
 
-        e_ucb_xs = Array(LinRange(0.0, maximum(xs_train), 50))
-        e_ucb_vars = zeros(Float64, length(e_ucb_xs))
-        e_ucb_mus =  zeros(Float64, length(e_ucb_xs))
-        k = 0.8
+        # information gain
+        xs_info_plot, info_plot = vals[length(vals)]
+        ys_info_plot = []
+        for x in xs_info_plot
+            push!(ys_info_plot, ys_train[findfirst(i->i==x, xs_train)])
+        end
 
         # plot observations
-        p = plot(xs_train, ys_train, title="$obs Observations, $n_particles Particles ", xlim= (minimum(xs_train), maximum(xs_train)), ylim=(minimum(ys_train)-1, maximum(ys_train)+1), legend=false, linecolor=:red)
+        l = @layout [a; b]
+        p = plot(xs_train, ys_train, title="$obs Observations, $n_particles Particles ", xlim=(x_min, x_max), ylim=(y_min-1, y_max+1), legend=false, linecolor=:red, layout = l)
 
         # get indices of the top n particles
         # weights = [vals[i][3] for i=1:length(vals)]
@@ -91,35 +97,28 @@ function make_animation_acquisition(animation_name, anim_traj, n_particles, xs_t
 
         # plot predictions
         # println("best_idxes", best_idxes)
-        for i=1:length(vals)
+        for i=1:length(vals) - 1 # last value stores info gain plot
             covariance_fn = vals[i][1]
             noise = vals[i][2]
             weight = vals[i][3]
-            plot_gp(p, covariance_fn, weight, obs_xs, obs_ys, pred_xs, noise)
-
-            # add E[UCB] * weight
-            (conditional_mu, conditional_cov_matrix) = compute_predictive(
-                covariance_fn, noise, obs_xs, obs_ys, e_ucb_xs)
-
-            for j=1:length(e_ucb_xs)
-                mu, var = conditional_mu[j], conditional_cov_matrix[j,j]
-                e_ucb_vars[j] += (k * var) * weight
-                e_ucb_mus[j] += mu * weight
-            end
+            plot_gp(p[1], covariance_fn, weight, obs_xs, obs_ys, pred_xs, noise)
         end
-        # plot!(p, e_ucb_xs, e_ucb_mus, yerror=e_ucb_vars, alpha=0.5)
-
-        # plot max UCB in diff color
-        min_ucb = argmin(e_ucb_mus + e_ucb_vars)
-        min_ucb_x = convert(Array{Float64}, [e_ucb_xs[min_ucb]])
-        min_ucb_mu = convert(Array{Float64}, [e_ucb_mus[min_ucb]])
-        min_ucb_var = convert(Array{Float64}, [e_ucb_vars[min_ucb]])
 
         old_obs = length(obs_xs) - 1
-        plot!(p, obs_xs[1 : old_obs], obs_ys[1 : old_obs], seriestype = :scatter,  marker = (:circle, 0.4, 8, :yellow))
-        plot!(p, obs_xs[old_obs+1 : length(obs_xs)], obs_ys[old_obs+1 : length(obs_xs)], seriestype = :scatter,  marker = (:circle, 0.8, 8, :red))
-        # plot!(p, min_ucb_x, min_ucb_mu, yerror=min_ucb_var, alpha=1, color=:red, markerstrokecolor=:red,  seriestype = :scatter,  marker = (:star5, 0.4, 8, :red))
+        plot!(p[1], obs_xs[1 : old_obs], obs_ys[1 : old_obs], seriestype = :scatter,  marker = (:circle, 0.4, 8, :yellow))
+        plot!(p[1], obs_xs[old_obs+1 : length(obs_xs)], obs_ys[old_obs+1 : length(obs_xs)], seriestype = :scatter,  marker = (:circle, 0.8, 8, :red))
 
+        if length(info_plot) > 0
+            plot2_y_min = minimum([y_min, minimum(info_plot)])-1
+            # info_y = info_plot .+ y_min
+            info_y = info_plot
+            max_info_idx = argmax(info_plot)
+            # lower_bound_adjusted = info_plot_adjusted .- (y_min - 1)
+            plot!(p[2], xs_train, ys_train, title="Information Gain", xlim=(x_min, x_max), ylim=(plot2_y_min, maximum([y_max, maximum(info_plot)]) + 1), legend=false, linecolor=:red)
+            plot!(p[2], obs_xs[1 : old_obs], obs_ys[1 : old_obs], seriestype = :scatter,  marker = (:circle, 0.4, 8, :yellow))
+            plot!(p[2], xs_info_plot, info_y, fillrange=[[y_min - 1 for i=1:length(info_y)], info_y .+ 0], fillalpha=0.6, fillcolor=:green)
+            plot!(p[2], [xs_info_plot[max_info_idx]], [info_y[max_info_idx]],  seriestype = :scatter,  marker = (:star, 0.8, 8, :red))
+        end
     end
 
     gif(anim, "animations/acquisition/" * animation_name * ".gif", fps = 1)

@@ -6,20 +6,6 @@ using Optim
 using StatsBase
 @load_generated_functions()
 
-# acquisition functions
-
-# UCB
-function ucb_fn(mu, var)
-    k = 0.8
-    return mu + k * var
-end
-
-# EI http://krasserm.github.io/2018/03/21/bayesian-optimization/
-# function ei_fn(mu,var)
-#
-# end
-
-
 function particle_filter_acquisition_AL(xs::Vector{Float64}, ys::Vector{Float64}, n_particles, callback, anim_traj, x_obs_traj, y_obs_traj, budget, random::Bool=false)
     # n_obs = length(xs)
     n_explore = 0
@@ -167,17 +153,17 @@ function get_next_obs_x(state, intervention_locs, past_obs_x, past_obs_y)
             info_gain += p_theta * 1/m * approx_info_gain
         end
         # negative to return max, since minimization
-        return info_gain
+        return -info_gain
     end
 
     # plot sparse grid of information gain
-    n_locs = min(30, length(intervention_locs))
+    n_locs = min(50, length(intervention_locs))
     xs_info_plot = intervention_locs[1:length(intervention_locs)÷n_locs:end]
     info_gains_plot = [get_information_gain(x) for x in xs_info_plot]
 
     # argmax_loc = Optim.minimizer(optimize(get_information_gain,  minimum(intervention_locs), maximum(intervention_locs)))
     # return (argmin(abs.(intervention_locs .- argmax_loc)), xs_info_plot, info_gains_plot)
-    best_loc = xs_info_plot[argmax(info_gains_plot)]
+    best_loc = xs_info_plot[argmin(info_gains_plot)]
     best_loc_idx = findfirst(x->x==best_loc, intervention_locs)
     return (best_loc_idx, xs_info_plot, info_gains_plot)
 end
