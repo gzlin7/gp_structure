@@ -120,8 +120,8 @@ function run_inference(dataset_name, animation_name, n_particles, sequential, f,
 end
 
 # dataset_names = ["changepoint", "polynomial", "sinusoid", "quadratic", "linear","airline", "quadratic"]
-dataset_names = ["21", "02", "05", "10"]
-dataset_names = ["04"]
+dataset_names = ["21", "02", "05", "10", "04"]
+dataset_names = ["05"]
 # dataset_names = ["quadratic"]
 n_particles_all = [100]
 

@@ -43,7 +43,7 @@ function particle_filter_acquisition_AL(xs::Vector{Float64}, ys::Vector{Float64}
         # Resample and rejuvenate if the effective sample size is too low
         # if effective_sample_size(state) < 0.5 * n_particles
         # Perform residual resampling, pruning low-weight particles
-        if (mod(t,10) == 0)
+        if (mod(t,5) == 0)
             pf_resample!(state, :multinomial)
             # Perform a rejuvenation move on past choices
             pf_rejuvenate!(state, mh, (subtree_proposal, (), subtree_involution))
@@ -175,9 +175,9 @@ function get_next_obs_x(state, intervention_locs, past_obs_x, past_obs_y)
     xs_info_plot = intervention_locs[1:length(intervention_locs)÷n_locs:end]
     info_gains_plot = [get_information_gain(x) for x in xs_info_plot]
 
-    # argmax_loc = Optim.minimizer(optimize(get_information_gain,  minimum(intervention_locs), maximum(intervention_locs)))
-    # return (argmin(abs.(intervention_locs .- argmax_loc)), xs_info_plot, info_gains_plot)
-    best_loc = xs_info_plot[argmax(info_gains_plot)]
-    best_loc_idx = findfirst(x->x==best_loc, intervention_locs)
-    return (best_loc_idx, xs_info_plot, info_gains_plot)
+    argmax_loc = Optim.minimizer(optimize(get_information_gain,  minimum(intervention_locs), maximum(intervention_locs)))
+    return (argmin(abs.(intervention_locs .- argmax_loc)), xs_info_plot, info_gains_plot)
+    # best_loc = xs_info_plot[argmax(info_gains_plot)]
+    # best_loc_idx = findfirst(x->x==best_loc, intervention_locs)
+    # return (best_loc_idx, xs_info_plot, info_gains_plot)
 end

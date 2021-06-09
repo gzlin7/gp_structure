@@ -109,16 +109,11 @@ function make_animation_acquisition(animation_name, anim_traj, n_particles, xs_t
         plot!(p[1], obs_xs[old_obs+1 : length(obs_xs)], obs_ys[old_obs+1 : length(obs_xs)], seriestype = :scatter,  marker = (:circle, 0.8, 8, :red))
 
         if length(info_plot) > 0
-            plot2_y_min = minimum([y_min, minimum(info_plot)])-1
-            # info_y = info_plot .+ y_min
-            info_y = info_plot
             max_info_idx = argmax(info_plot)
-            # lower_bound_adjusted = info_plot_adjusted .- (y_min - 1)
-            println(info_plot)
-            plot!(p[2], xs_train, ys_train, title="Information Gain", xlim=(x_min, x_max), ylim=(plot2_y_min, maximum([y_max, maximum(info_plot)]) + 1), legend=false, linecolor=:red)
-            plot!(p[2], obs_xs[1 : old_obs], obs_ys[1 : old_obs], seriestype = :scatter,  marker = (:circle, 0.4, 8, :yellow))
-            plot!(p[2], xs_info_plot, info_y, fillrange=[[y_min - 1 for i=1:length(info_y)], info_y .+ 0], fillalpha=0.6, fillcolor=:green)
-            plot!(p[2], [xs_info_plot[max_info_idx]], [info_y[max_info_idx]],  seriestype = :scatter,  marker = (:star, 0.8, 8, :red))
+            low_bound = minimum(info_plot) - 1
+            plot!(p[2], obs_xs[1 : old_obs], info_plot[1 : old_obs], seriestype = :scatter,  marker = (:circle, 0.4, 8, :yellow), title="Information Gain", xlim=(x_min, x_max), ylim=(low_bound, maximum(info_plot) + 1), legend=false)
+            plot!(p[2], xs_info_plot, info_plot, fillrange=[[low_bound for i=1:length(info_plot)], info_plot], fillalpha=0.6, fillcolor=:green)
+            plot!(p[2], [xs_info_plot[max_info_idx]], [info_plot[max_info_idx]],  seriestype = :scatter,  marker = (:star, 0.8, 8, :red))
         end
     end
 
