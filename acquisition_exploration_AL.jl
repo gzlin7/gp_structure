@@ -69,8 +69,8 @@ end
 # return n_samples (sample unweighted) from state, with corresponding normalized weight array
 function sample_traces(state, n_samples)
     state_weights = get_norm_weights(state)
-    print("STATE WEIGHTS")
-    println(state_weights)
+    # print("STATE WEIGHTS")
+    # println(state_weights)
     state_traces = state.traces
     # sample n_samples traces without replacement
     sample_idxes = StatsBase.knuths_sample!([i for i=1:length(state_traces)], [1 for i=1:n_samples])
@@ -129,7 +129,7 @@ function get_next_obs_x(state, intervention_locs, past_obs_x, past_obs_y)
     ret = sample_traces(state, n_traces)
     traces = ret[1]
     weights = ret[2]
-    println("Weights " * string(weights))
+    # println("Weights " * string(weights))
 
 
     function get_information_gain(intervention_x)
@@ -170,7 +170,7 @@ function get_next_obs_x(state, intervention_locs, past_obs_x, past_obs_y)
     n_locs = min(30, length(intervention_locs))
     xs_info_plot = intervention_locs[1:length(intervention_locs)÷n_locs:end]
     info_gains_plot = [get_information_gain(x) for x in xs_info_plot]
-    println("Info Gain " * string(info_gains_plot))
+    # println("Info Gain " * string(info_gains_plot))
 
     argmax_loc = Optim.minimizer(optimize(get_information_gain,  minimum(intervention_locs), maximum(intervention_locs)))
     return (argmin(abs.(intervention_locs .- argmax_loc)), xs_info_plot, info_gains_plot)

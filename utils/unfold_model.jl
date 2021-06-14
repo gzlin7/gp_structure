@@ -85,6 +85,7 @@ get_conditional_ys = Unfold(calc_conditional_dist)
 @gen (static) function model(n)
     # sample covariance function
     covariance_fn::Node = @trace(covariance_prior(1), :tree)
+    # covariance_fn::Node = Times(Linear(1.0), Linear(1.0))
 
     # sample diagonal noise
     noise = @trace(gamma(1, 1), :noise) + 0.01
