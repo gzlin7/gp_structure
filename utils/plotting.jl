@@ -128,3 +128,17 @@ function make_accuracy_plot(plot_name, anim_traj)
     plot!(p, x, e_pred_ll, label="e_pred_ll")
     savefig(p, "animations/acquisition/plots/" * plot_name)
 end
+
+function make_acc_plot_multi(plot_name, anim_traj_random, anim_traj_AL)
+    avg_mse_rand, avg_mse_AL = mean([traj["e_mse"] for traj in anim_traj_random]), mean([traj["e_mse"] for traj in anim_traj_AL])
+    avg_predll_rand, avg_predll_AL = mean([traj["e_pred_ll"] for traj in anim_traj_random]), mean([traj["e_pred_ll"] for traj in anim_traj_AL])
+    x = 1:length(avg_mse_rand)
+    # mse plot
+    p_mse = plot(x, avg_mse_rand, label="E[MSE] Random", legend=:right, title=plot_name * "_mse", xlabel="no. observations")
+    plot!(p_mse, x, avg_mse_AL, label="E[MSE] Active")
+    savefig(p_mse, "animations/acquisition/plots/overall/" * plot_name * "_mse")
+    # pred ll plot
+    p_mse = plot(x, avg_predll_rand, label="E[Pred LL] Random", legend=:right, title=plot_name * "_pll", xlabel="no. observations")
+    plot!(p_mse, x, avg_predll_AL, label="E[Pred LL] Active")
+    savefig(p_mse, "animations/acquisition/plots/overall/" * plot_name * "_pll")
+end

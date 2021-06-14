@@ -97,7 +97,7 @@ get_conditional_ys = Unfold(calc_conditional_dist)
     covm_22 = []
     covariance_matrix = []
     vars = Float64[]
-    state ~ get_conditional_ys(n, [sampled_xs,ys,mus,vars,covm_22, covariance_matrix], covariance_fn, noise)
+    state ~ get_conditional_ys(n, [sampled_xs, ys, mus, vars, covm_22, covariance_matrix], covariance_fn, noise)
     ys = last(state)[2]
     return (covariance_fn, ys)
 end
