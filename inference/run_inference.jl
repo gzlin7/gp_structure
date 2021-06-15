@@ -10,8 +10,7 @@ include("inference_helper.jl")
 # visualize_inference(animation_name, inference_ret)
 
 # dataset_names = ["changepoint", "polynomial", "sinusoid", "quadratic", "linear","airline", "quadratic"]
-dataset_names = ["21", "02", "05", "10", "04"]
-dataset_names = ["21"]
+dataset_names = ["02", "05", "10", "04", "21"]
 # dataset_names = ["quadratic"]
 n_particles_all = [100]
 n_trials = 1

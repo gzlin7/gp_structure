@@ -87,7 +87,7 @@ function visualize_inference(animation_name, inference_ret)
 end
 
 # plot 1 function
-dataset_name, animation_name, n_particles, n_obs_plotting, budget = "21", "quadratic_anim", 100, 25, 10
+dataset_name, animation_name, n_particles, n_obs_plotting, budget = "quadratic", "quadratic_anim", 100, 25, 10
 # load data
 data = load_data(dataset_name, n_obs_plotting)
 # run inference
