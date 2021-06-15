@@ -1,7 +1,7 @@
 include("inference_helper.jl")
 
 # plot 1 function
-# dataset_name, animation_name, n_particles, n_obs_plotting, budget = "quadratic", "quadratic_anim", 100, 100, 20
+# dataset_name, animation_name, n_particles, n_obs_plotting, budget = "21", "quadratic_anim", 100, 100, 20
 # #load data
 # data = load_data(dataset_name, n_obs_plotting)
 # # run inference
@@ -11,9 +11,10 @@ include("inference_helper.jl")
 
 # dataset_names = ["changepoint", "polynomial", "sinusoid", "quadratic", "linear","airline", "quadratic"]
 dataset_names = ["21", "02", "05", "10", "04"]
+dataset_names = ["21"]
 # dataset_names = ["quadratic"]
 n_particles_all = [100]
-n_trials = 5
+n_trials = 1
 
 for i=1:length(dataset_names)
     dataset_name = dataset_names[i]
@@ -33,13 +34,13 @@ for i=1:length(dataset_names)
         data = load_data(dataset_name, n_obs_plotting)
 
         # random
-        al_inference_ret =  run_inference(data, n_particles, budget, true)
-        push!(anim_traj_random, al_inference_ret[1])
-        visualize_inference(animation_name_rand, al_inference_ret)
-        # AL
-        rand_inference_ret =  run_inference(data, n_particles, budget, false)
+        rand_inference_ret =  run_inference(data, n_particles, budget, true)
         push!(anim_traj_random, rand_inference_ret[1])
-        visualize_inference(animation_name_al, rand_inference_ret)
+        visualize_inference(animation_name_rand, rand_inference_ret)
+        # AL
+        al_inference_ret =  run_inference(data, n_particles, budget, false)
+        push!(anim_traj_AL, al_inference_ret[1])
+        visualize_inference(animation_name_al, al_inference_ret)
     end
 
     # plot combined graph

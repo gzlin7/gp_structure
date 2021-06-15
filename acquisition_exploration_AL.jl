@@ -4,6 +4,7 @@ include("utils/plotting.jl")
 using GenParticleFilters
 using Optim
 using StatsBase
+using Distributions
 @load_generated_functions()
 
 function particle_filter_acquisition_AL(xs::Vector{Float64}, ys::Vector{Float64}, n_particles, callback, anim_traj, x_obs_traj, y_obs_traj, budget, random::Bool=false)
@@ -28,12 +29,12 @@ function particle_filter_acquisition_AL(xs::Vector{Float64}, ys::Vector{Float64}
         # Resample and rejuvenate if the effective sample size is too low
         # if effective_sample_size(state) < 0.5 * n_particles
         # Perform residual resampling, pruning low-weight particles
-        # if (mod(t,5) == 0)
-        #     pf_resample!(state, :multinomial)
-        #     # Perform a rejuvenation move on past choices
-        #     pf_rejuvenate!(state, mh, (subtree_proposal, (), subtree_involution))
-        #     pf_rejuvenate!(state, mh, (noise_proposal, ()))
-        # end
+        if (mod(t,5) == 0)
+            pf_resample!(state, :multinomial)
+            # Perform a rejuvenation move on past choices
+            pf_rejuvenate!(state, mh, (subtree_proposal, (), subtree_involution))
+            pf_rejuvenate!(state, mh, (noise_proposal, ()))
+        end
 
         # select next observation point
         if (t > n_explore) && !random
@@ -92,6 +93,7 @@ end
 # return array of (conditional_mu, conditional_cov_matrix) for each covariance_fn in trace (in order)
 function get_dist_traces(traces, weights, past_obs_x, past_obs_y, intervention_x)
     mu_cov = []
+    mvnorms = []
     for i=1:length(traces)
         trace = traces[i]
         theta = get_retval(trace)[1]
@@ -102,21 +104,23 @@ function get_dist_traces(traces, weights, past_obs_x, past_obs_y, intervention_x
             theta, noise, past_obs_x, past_obs_y, [intervention_x])
         # mu, var = conditional_mu[1], conditional_cov_matrix[1,1]
         push!(mu_cov, (conditional_mu, conditional_cov_matrix))
+        push!(mvnorms, MvNormal(conditional_mu, conditional_cov_matrix))
     end
-    return mu_cov
+    return mu_cov, mvnorms
 end
 
 # P(Y|theta)
-function calc_log_prob_y_given_th(y, mu_cov, theta_idx)
-    (conditional_mu, conditional_cov_matrix) = mu_cov[theta_idx]
-    return logpdf(mvnormal, [y], conditional_mu, conditional_cov_matrix)
+function calc_prob_y_given_th(y, mvnorms, theta_idx)
+    return pdf(mvnorms[theta_idx], [y])
+    # (conditional_mu, conditional_cov_matrix) = mu_cov[theta_idx]
+    # return logpdf(mvnormal, [y], conditional_mu, conditional_cov_matrix)
 end
 
 # P(Y) over all thetas
 function calc_prob_y(mu_cov, y, weights)
     p_y = 0
     for i=1:length(mu_cov)
-        p_y += exp(calc_log_prob_y_given_th(y, mu_cov, i) + log(weights[i]))
+        p_y += calc_prob_y_given_th(y, mu_cov, i) * weights[i]
     end
     return p_y
 end
@@ -134,7 +138,7 @@ function get_next_obs_x(state, intervention_locs, past_obs_x, past_obs_y)
 
     function get_information_gain(intervention_x)
         info_gain = 0
-        mu_cov = get_dist_traces(traces, weights, past_obs_x, past_obs_y, intervention_x)
+        mu_cov, mvnorms = get_dist_traces(traces, weights, past_obs_x, past_obs_y, intervention_x)
 
         # for each theta
         for i=1:length(mu_cov)
@@ -146,16 +150,16 @@ function get_next_obs_x(state, intervention_locs, past_obs_x, past_obs_y)
             approx_info_gain = 0
             # for each y
             for y in m_outcomes
-                log_py_trace = calc_log_prob_y_given_th(y, mu_cov, i)
-                info_gain = log(p_theta) + log_py_trace - log(calc_prob_y(mu_cov, y, weights))
+                log_py_trace = log(calc_prob_y_given_th(y, mvnorms, i))
+                info_gain = log(p_theta) + log_py_trace - log(calc_prob_y(mvnorms, y, weights))
                 if info_gain == NaN || info_gain == Inf
-                    # println(approx_info_gain)
-                    # println(weights[i])
-                    # println(log(p_theta))
-                    # println(log_py_trace)
-                    # println(calc_prob_y(mu_cov, y, weights))
-                    # println(log(calc_prob_y(mu_cov, y, weights)))
-                    # println("end")
+                    println(approx_info_gain)
+                    println(weights[i])
+                    println(log(p_theta))
+                    println(log_py_trace)
+                    println(calc_prob_y(mvnorms, y, weights))
+                    println(log(calc_prob_y(mvnorms, y, weights)))
+                    println("end")
                 else
                     approx_info_gain += info_gain
                 end

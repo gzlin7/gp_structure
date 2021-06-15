@@ -176,7 +176,7 @@ end
 
 function compute_log_likelihood(cov_matrix::Matrix{Float64}, ys::Vector{Float64})
     n = length(ys)
-    logpdf(mvnormal, ys, zeros(n), cov_matrix)
+    Gen.logpdf(mvnormal, ys, zeros(n), cov_matrix)
 end
 
 """
@@ -187,7 +187,7 @@ function predictive_ll(covariance_fn::Node, noise::Float64,
                        new_xs::Vector{Float64}, new_ys::Vector{Float64})
     (conditional_mu, conditional_cov_matrix) = compute_predictive(
         covariance_fn, noise, xs, ys, new_xs)
-    logpdf(mvnormal, new_ys, conditional_mu, conditional_cov_matrix)
+    Gen.logpdf(mvnormal, new_ys, conditional_mu, conditional_cov_matrix)
 end
 
 function compute_predictive(covariance_fn::Node, noise::Float64,
