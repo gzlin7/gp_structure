@@ -1,9 +1,9 @@
 using Plots
-using Dstributions
+using Distributions
 gr()
 Plots.GRBackend()
-include("shared.jl")
-include("acquisition_exploration_AL.jl")
+include("../utils/shared.jl")
+include("../acquisition_exploration_AL.jl")
 
 # Generate data
 function get_dataset(f, n_obs, data_bounds)
@@ -19,15 +19,25 @@ obs_xs, obs_ys = [0.0, 2.0], [1.0, 1.0]
 function calc_info_gain(theta1, theta2, noise, new_x)
     info_gain = 0
     p_theta = 0.5
-    for theta in [theta1, theta2]
+
+    conditional_mu_1, conditional_cov_matrix_1 = compute_predictive(theta1, noise, obs_xs, obs_ys, [new_x])
+    mvnorm1 = MvNormal(conditional_mu_1, conditional_cov_matrix_1)
+    conditional_mu_2, conditional_cov_matrix_2 = compute_predictive(theta2, noise, obs_xs, obs_ys, [new_x])
+    mvnorm2 = MvNormal(conditional_mu_2, conditional_cov_matrix_2)
+
+    mu_cov = [(conditional_mu_1, conditional_cov_matrix_1), (conditional_mu_2, conditional_cov_matrix_2)]
+    mvnorms = [mvnorm1, mvnorm2]
+    thetas = [theta1, theta2]
+
+    for i=1:2
         theta_info_gain = 0
-        conditional_mu, conditional_cov_matrix = compute_predictive(node, noise, obs_xs, obs_ys, [new_x])
+        theta = thetas[i]
+        conditional_mu, conditional_cov_matrix = mu_cov[i]
         mu, var = conditional_mu[1], conditional_cov_matrix[1,1]
-        m_outcomes = [normal(mu, var) for t=1:m]
-        conditional_dist = MvNormal(conditional_mu, conditional_cov_matrix)
+        m_outcomes = [normal(mu, var) for t=1:30]
         for y in m_outcomes
-            log_py_trace = log(calc_prob_y_given_th(y, [conditional_dist], 1))
-            theta_info_gain += log(p_theta) + log_py_trace - log(calc_prob_y(mvnorms, y, weights))
+            log_py_trace = log(calc_prob_y_given_th(y, mvnorms, i))
+            theta_info_gain += log(p_theta) + log_py_trace - log(calc_prob_y(mvnorms, y, [0.5, 0.5]))
         end
         info_gain += p_theta * 1/2 * theta_info_gain
     end

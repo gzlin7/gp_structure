@@ -1,7 +1,7 @@
 using Plots
 gr()
 Plots.GRBackend()
-include("shared.jl")
+include("../utils/shared.jl")
 
 # Generate data
 function get_dataset(f, n_obs, data_bounds)
