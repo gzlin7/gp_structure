@@ -18,7 +18,7 @@ functions = Dict("sinusoid"=> x -> 0.20sin(15.7x),
                  "21" => x -> x * sin(x) + x * cos(2x)             )
 
 bounds_default = (0.0,0.4)
-bounds =  Dict( "quadratic" => (-1.0, 3.0),
+bounds =  Dict( "quadratic" => (-5.0, 7.0),
                 "02" =>  (2.7,7.5),
                 "03" => (-10, 10),
                 "04" => (1.9, 3.9),

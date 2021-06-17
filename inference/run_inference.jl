@@ -10,7 +10,7 @@ include("inference_helper.jl")
 # visualize_inference(animation_name, inference_ret)
 
 # dataset_names = ["changepoint", "polynomial", "sinusoid", "quadratic", "linear","airline", "quadratic"]
-dataset_names = ["02", "05", "10", "04", "21"]
+dataset_names = ["14"] #, "02", "05", "10", "04", "21"]
 # dataset_names = ["quadratic"]
 n_particles_all = [100]
 n_trials = 1
@@ -27,8 +27,8 @@ for i=1:length(dataset_names)
 
         char = "multi_"
 
-        animation_name_rand = char * dataset_name * "_rand_" * string(n_particles) * "_" * string(j)
-        animation_name_al = char * dataset_name * "_active_" * string(n_particles) * "_" * string(j)
+        animation_name_rand = "/" * dataset_name * "/random/" * char * dataset_name * "_rand_" * string(n_particles) * "_" * string(j)
+        animation_name_al = "/" * dataset_name * "/active/" * char * dataset_name * "_active_" * string(n_particles) * "_" * string(j)
 
         data = load_data(dataset_name, n_obs_plotting)
 
@@ -43,6 +43,6 @@ for i=1:length(dataset_names)
     end
 
     # plot combined graph
-    plot_name = dataset_name * "_multi_overall_" * string(n_trials) * "_" * string(n_particles)
+    plot_name = "_multi_overall_" * string(n_trials) * "_" * string(n_particles)
     make_acc_plot_multi(plot_name, anim_traj_random, anim_traj_AL)
 end

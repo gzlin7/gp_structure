@@ -23,7 +23,7 @@ function plot_gp(plot, covariance_fn, weight, obs_xs, obs_ys, pred_xs, noise)
         push!(variances, sqrt(var))
     end
     pred_ys = conditional_mu
-    plot!(plot,pred_xs,pred_ys, linealpha = weight*10, linecolor=:teal,
+    plot!(plot,pred_xs, pred_ys, linealpha = weight*10, linecolor=:teal,
     ribbon=variances, fillalpha=weight, fillcolor=:lightblue)
 end
 
@@ -75,8 +75,8 @@ function make_animation_acquisition(animation_name, anim_traj, n_particles, xs_t
 
     anim = @animate for obs in sort!(sorted_obs)
         vals = anim_traj[obs]
-        obs_xs = x_obs_traj[1:obs]
-        obs_ys = y_obs_traj[1:obs]
+        obs_xs = x_obs_traj[1:obs-1]
+        obs_ys = y_obs_traj[1:obs-1]
         pred_xs = xs
 
         # information gain
@@ -88,7 +88,7 @@ function make_animation_acquisition(animation_name, anim_traj, n_particles, xs_t
 
         # plot observations
         l = @layout [a; b]
-        p = plot(xs_train, ys_train, title="$obs Observations, $n_particles Particles ", xlim=(x_min, x_max), ylim=(y_min-1, y_max+1), legend=false, linecolor=:red, layout = l)
+        p = plot(xs_train, ys_train, title="$(obs-1) Observations, $n_particles Particles ", xlim=(x_min, x_max), ylim=(y_min-1, y_max+1), legend=false, linecolor=:red, layout = l)
 
         # get indices of the top n particles
         # weights = [vals[i][3] for i=1:length(vals)]

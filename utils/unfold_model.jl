@@ -47,7 +47,7 @@ end
     cov_matrix = prev_state[6]
 
     # randomly sample x
-    x ~ uniform(0,1000)
+    x ~ uniform(-1000,1000)
     xs = [xs; x]
     var = eval_cov(covariance_fn, x, x) + noise
 

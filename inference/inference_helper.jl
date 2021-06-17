@@ -17,6 +17,10 @@ function load_data(dataset_name, n_obs_plotting)
         data_bounds = haskey(bounds, dataset_name) ? bounds[dataset_name] : bounds_default
         xs_train = collect(LinRange(data_bounds[1], data_bounds[2], n_obs_plotting))
 
+        if (dataset_name == "quadratic")
+            xs_train = [[0.0, 2.0] ; xs_train]
+        end
+
         sort!(xs_train)
         ys_train = deepcopy(xs_train)
         @. ys_train = f.(xs_train)
@@ -87,7 +91,7 @@ function visualize_inference(animation_name, inference_ret)
 end
 
 # plot 1 function
-dataset_name, animation_name, n_particles, n_obs_plotting, budget = "quadratic", "quadratic_anim", 100, 25, 10
+dataset_name, animation_name, n_particles, n_obs_plotting, budget = "quadratic", "quadratic_anim", 100, 100, 15
 # load data
 data = load_data(dataset_name, n_obs_plotting)
 # run inference
