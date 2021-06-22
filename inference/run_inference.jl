@@ -10,15 +10,15 @@ include("inference_helper.jl")
 # visualize_inference(animation_name, inference_ret)
 
 # dataset_names = ["changepoint", "polynomial", "sinusoid", "quadratic", "linear","airline", "quadratic"]
-dataset_names = ["14"] #, "02", "05", "10", "04", "21"]
+dataset_names = ["21", "02", "04", "05", "10"]
 # dataset_names = ["quadratic"]
 n_particles_all = [100]
-n_trials = 1
+n_trials = 5
 
 for i=1:length(dataset_names)
     dataset_name = dataset_names[i]
     n_obs_plotting = haskey(fn_to_obs, dataset_name) ? fn_to_obs[dataset_name] : n_obs_default
-    budget = 10
+    budget = 20
 
     anim_traj_random = []
     anim_traj_AL = []
@@ -43,6 +43,6 @@ for i=1:length(dataset_names)
     end
 
     # plot combined graph
-    plot_name = "_multi_overall_" * string(n_trials) * "_" * string(n_particles)
+    plot_name = dataset_name * "_multi_overall_" * string(n_trials) * "_" * string(n_particles)
     make_acc_plot_multi(plot_name, anim_traj_random, anim_traj_AL)
 end

@@ -1,4 +1,5 @@
 using Plots
+using NumericalIntegration
 gr()
 Plots.GRBackend()
 include("../utils/shared.jl")
@@ -40,6 +41,36 @@ function calc_info_gain(theta1, theta2, noise, new_x)
     return info_gain
 end
 
+
+# approximate integral over bounded range
+function approx_gain_integral(theta1, theta2, noise, new_x)
+    conditional_mu_1, conditional_cov_matrix_1 = compute_predictive(theta1, noise, obs_xs, obs_ys, [new_x])
+    conditional_mu_2, conditional_cov_matrix_2 = compute_predictive(theta2, noise, obs_xs, obs_ys, [new_x])
+
+    mu_1, std_1 = conditional_mu_1[1], sqrt(conditional_cov_matrix_1[1,1])
+    mu_2, std_2 = conditional_mu_2[1], sqrt(conditional_cov_matrix_2[1,1])
+    println(mu_1)
+
+    # integration bounds = 3 std's from mean
+    int_low_bound = minimum([mu_1 - 3 * std_1, mu_2 - 3 * std_2])
+    int_hi_bound = maximum([mu_1 + 3 * std_1, mu_2 + 3 * std_2])
+
+    function integrand(y)
+        log_p_y_th1 = log(1/(std_1)) + -1/2 * ((y - mu_1)/std_1)^2
+        log_p_y_th2 = log(1/(std_2)) + -1/2 * ((y - mu_2)/std_2)^2
+        sum_logs = logsumexp(log_p_y_th1, log_p_y_th2)
+        # println(exp(log_p_y_th1) * (log_p_y_th1 - sum_logs))
+        # println(exp(log_p_y_th2) * (log_p_y_th2 - sum_logs))
+
+        return exp(log_p_y_th1) * (log_p_y_th1 - sum_logs) + exp(log_p_y_th2) * (log_p_y_th2 - sum_logs)
+    end
+
+    x = collect(int_low_bound : abs(int_hi_bound-int_low_bound)/100 : int_hi_bound)
+    y = integrand.(x)
+
+    return integrate(x, y)
+end
+
 function plot_info_gain(func_xs, func_ys, obs_xs, obs_ys, info_plot)
     # make double plot
     x_min, x_max = minimum(func_xs), maximum(func_xs)
@@ -70,10 +101,10 @@ m = 500
 quadratic_fn = Times(Linear(1.0), Linear(1.0))
 constant_fn = Constant(2.0)
 noise = 0.0001
-pred_xs = collect(LinRange(-3.0, 5.0, 100))
+pred_xs = collect(LinRange(-2.0, 4.0, 100))
 sort!(pred_xs)
 
 func_xs, func_ys = get_dataset(functions["quadratic"], pred_xs)
-info_plot = [calc_info_gain(quadratic_fn, constant_fn, noise, new_x) for new_x in pred_xs]
+info_plot = [approx_gain_integral(quadratic_fn, constant_fn, noise, new_x) for new_x in pred_xs]
 
 plot_info_gain(func_xs, func_ys, obs_xs, obs_ys, info_plot)
