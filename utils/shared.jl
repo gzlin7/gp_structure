@@ -80,16 +80,17 @@ end
 Squared exponential kernel
 """
 struct SquaredExponential <: LeafNode
+    scale::Float64
     length_scale::Float64
 end
 
 function eval_cov(node::SquaredExponential, x1, x2)
-    exp(-0.5 * (x1 - x2) * (x1 - x2) / node.length_scale)
+    exp(node.scale * -0.5 * (x1 - x2) * (x1 - x2) / node.length_scale)
 end
 
 function eval_cov_mat(node::SquaredExponential, xs::Vector{Float64})
     diff = xs .- xs'
-    exp.(-0.5 .* diff .* diff ./ node.length_scale)
+    exp.(node.scale * -0.5 .* diff .* diff ./ node.length_scale)
 end
 
 
@@ -224,7 +225,7 @@ end
 
 function compute_mse(covariance_fn, noise, xs_train, ys_train, xs_test, ys_test)
     (conditional_mu, _) = compute_predictive(covariance_fn, noise, xs_train, ys_train, xs_test)
-    mean(sum((conditional_mu .- ys_test) .^ 2))
+    sum((conditional_mu .- ys_test) .^ 2)
 end
 
 const CONSTANT = 1 # 0.2
@@ -235,7 +236,10 @@ const PLUS = 5 # binary 0.1
 const TIMES = 6 # binary 0.1
 const BINARY_OPS = Set{Int}([PLUS, TIMES])
 
-const node_dist = Float64[0.2, 0.2, 0.2, 0.2, 0.1, 0.1]
+# const node_dist = Float64[0.2, 0.2, 0.2, 0.2, 0.1, 0.1]
+# const node_dist = Float64[0.0, 0.7, 0.0, 0.0, 0.3, 0.0]
+const node_dist = Float64[0.0, 0.0, 0.0, 1.0, 0.0, 0.0]
+
 
 const node_type_to_num_children = Dict(
     CONSTANT => 0,

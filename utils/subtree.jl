@@ -14,8 +14,9 @@ using Gen
 
     # squared exponential kernel
     elseif node_type == SQUARED_EXP
+        scale = @trace(uniform_continuous(0, 10), (cur, :scale))
         length_scale= @trace(uniform_continuous(0, 1), (cur, :length_scale))
-        node = SquaredExponential(length_scale)
+        node = SquaredExponential(scale, length_scale)
 
     # periodic kernel
     elseif node_type == PERIODIC

@@ -1,6 +1,7 @@
 include("../sequential.jl")
 include("../acquisition_exploration_AL.jl")
 include("functions.jl")
+include("analytical_infogain.jl")
 # include("../acquisition_exploration_testing.jl")
 
 function load_data(dataset_name, n_obs_plotting)
@@ -9,9 +10,6 @@ function load_data(dataset_name, n_obs_plotting)
         (xs, ys) = f()
         xs_train = xs[1:100]
         ys_train = ys[1:100]
-        xs_test = xs_train
-        ys_test = ys_train
-
     else
         # Generate data
         data_bounds = haskey(bounds, dataset_name) ? bounds[dataset_name] : bounds_default
@@ -24,22 +22,17 @@ function load_data(dataset_name, n_obs_plotting)
         sort!(xs_train)
         ys_train = deepcopy(xs_train)
         @. ys_train = f.(xs_train)
-
-        xs_test = [uniform(data_bounds[1], data_bounds[2]) for t=1:n_obs_plotting]
-        sort!(xs_test)
-        ys_test = deepcopy(xs_test)
-        @. ys_test = f.(xs_test)
     end
 
-    return (xs_train, ys_train, xs_test, ys_test)
+    return (xs_train, ys_train)
 end
 
 
 function run_inference(data, n_particles, budget, random)
     # set seed
-    Random.seed!(1)
+    # Random.seed!(1)
 
-    xs_train, ys_train, xs_test, ys_test = data
+    xs_train, ys_train = data
 
     # define callback with data
     function pf_callback(state, xs_obs, ys_obs, anim_traj, t, xs_info_plot, info_plot)
@@ -69,7 +62,7 @@ function run_inference(data, n_particles, budget, random)
         # store information gain plotting info for each timestep
         push!(anim_traj[t], [xs_info_plot, info_plot])
         # store E[MSE] and E[Predictive Likelihood]
-        println("E[mse]: $e_mse, E[predictive log likelihood]: $e_pred_ll")
+        # println("E[mse]: $e_mse, E[predictive log likelihood]: $e_pred_ll")
         push!(anim_traj["e_mse"], e_mse)
         push!(anim_traj["e_pred_ll"], e_pred_ll)
     end
@@ -78,23 +71,33 @@ function run_inference(data, n_particles, budget, random)
     x_obs_traj = Float64[]
     y_obs_traj = Float64[]
     @time state = particle_filter_acquisition_AL(xs_train, ys_train, n_particles, pf_callback, anim_traj, x_obs_traj, y_obs_traj, budget, random)
-    return (anim_traj, n_particles, xs_train, ys_train, xs_test, ys_test, x_obs_traj, y_obs_traj)
+    return (anim_traj, n_particles, xs_train, ys_train, x_obs_traj, y_obs_traj)
 end
 
 
-function visualize_inference(animation_name, inference_ret)
-    anim_traj, n_particles, xs_train, ys_train, xs_test, ys_test, x_obs_traj, y_obs_traj = inference_ret
+function visualize_inference(animation_name, objective, info_metric, inference_ret)
+    anim_traj, n_particles, xs_train, ys_train, x_obs_traj, y_obs_traj = inference_ret
 
-    make_animation_acquisition(animation_name, anim_traj, n_particles, xs_train, ys_train, xs_test, ys_test, x_obs_traj, y_obs_traj)
+    make_animation_acquisition(animation_name, objective, info_metric, anim_traj, n_particles, xs_train, ys_train, x_obs_traj, y_obs_traj)
     plot_name = animation_name * "_acc"
     make_accuracy_plot(plot_name, anim_traj)
 end
 
 # plot 1 function
-dataset_name, animation_name, n_particles, n_obs_plotting, budget = "quadratic", "quadratic_anim", 100, 100, 15
+# dataset_name, animation_name, n_particles, n_obs_plotting, budget = "airline", "airline_new", 100, 100, 15
 # load data
-data = load_data(dataset_name, n_obs_plotting)
+# data = load_data(dataset_name, n_obs_plotting)
+
+# cov_fn = SquaredExponential(0.1)
+# cov_fn = Periodic(0.25, 0.5)
+# pred_xs = sort!(collect(LinRange(-1, 1, 200)))
+# # pred_xs = sort!(collect(LinRange(-10, 10, 200)))
+# noise = 0.0001
+# train_x, train_y = get_dataset_gp(cov_fn, noise, pred_xs)
+# test_x, test_y = get_dataset_gp(cov_fn, noise, pred_xs)
+# data = [train_x, train_y, test_x, test_y]
+
 # run inference
-inference_ret = run_inference(data, n_particles, budget, false)
-# visualize
-visualize_inference(animation_name, inference_ret)
+# inference_ret = run_inference(data, n_particles, budget, "gp")
+# # visualize
+# visualize_inference(animation_name, inference_ret)

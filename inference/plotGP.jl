@@ -12,38 +12,49 @@ function get_dataset(f, n_obs, data_bounds)
     return (xs_train, ys_train)
 end
 
-function test_plot_gp(plot_name, covariance_fn_1, covariance_fn_2, xs, noise)
-    # plot posterior means and vanriance given one covariance fn
-    ys_1 = mvnormal(zeros(length(xs)), compute_cov_matrix(covariance_fn_1, noise, xs))
-    ys_2 = mvnormal(zeros(length(xs)), compute_cov_matrix(covariance_fn_2, noise, xs))
-
-    p = plot(xs, ys_1, linecolor=:teal, fillalpha=0.5, fillcolor=:lightblue)
-    plot!(p, xs, ys_2, linecolor=:red, fillalpha=0.5, fillcolor=:lightblue)
-
+# plot posterior means and vanriance for each cov fn
+function test_plot_gp(plot_name, cov_fns, xs, noise)
+    p = plot(legend=true, title=plot_name)
+    for cov_fn in cov_fns
+        ys = mvnormal(zeros(length(xs)), compute_cov_matrix(cov_fn, noise, xs))
+        plot!(p, xs, ys, label=string(cov_fn))
+    end
     savefig(p, "plots_gp/" * plot_name)
 end
 
-function test_plot_gp_fixed(plot_name, covariance_fn_1, covariance_fn_2, past_xs, past_ys, xs, noise)
+function test_plot_gp_w_obs(plot_name, fn_xs, fn_ys, cov_fns, past_xs, past_ys, xs, noise)
     # plot posterior means and vanriance given one covariance fn
-    ys_1 =   predict_ys(covariance_fn_1, noise, past_xs, past_ys, xs)
-    ys_2 = predict_ys(covariance_fn_2, noise, past_xs, past_ys, xs)
-
-    p = plot(xs, ys_1, linecolor=:teal, fillalpha=0.5, fillcolor=:lightblue)
-    plot!(p, xs, ys_2, linecolor=:red, fillalpha=0.5, fillcolor=:lightblue)
-
-    fn_xs, fn_ys = get_dataset(x -> (x-1)^2, 100, [-1, 3])
-    plot!(p, fn_xs, fn_ys, linecolor=:green, fillalpha=0.5, fillcolor=:lightblue)
-
+    p = plot(legend=true, title=plot_name)
+    for cov_fn in cov_fns
+        ys = predict_ys(cov_fn, noise, past_xs, past_ys, xs)
+        plot!(p, xs, ys, label=string(cov_fn))
+    end
+    # plot function
+    plot!(p, fn_xs, fn_ys, label="test_fn")
     savefig(p, "plots_gp/" * plot_name)
 end
 
-plot_name = "testing_gp_plot"
-quadratic_fn = Times(Linear(1.0), Linear(1.0))
-constant_fn = Constant(2.0)
 noise = 0.0001
 
-pred_xs = collect(LinRange(-1.0, 3.0, 150))
-sort!(pred_xs)
+# test case 1: quadratic vs constant
+plot_name = "test_1"
+cov_fns = [Times(Linear(1.0), Linear(1.0)),  Constant(2.0)]
+pred_xs = sort!(collect(LinRange(-1.0, 3.0, 150)))
+f = x -> (x-1)^2
+fn_xs, fn_ys = get_dataset(f, 100, [-1, 3])
+test_plot_gp_w_obs(plot_name, fn_xs, fn_ys, cov_fns, [0.0, 2.0], [1.0, 1.0], pred_xs, noise)
 
-# test_plot_gp(plot_name, quadratic_fn, constant_fn, pred_xs, noise)
-test_plot_gp_fixed(plot_name, quadratic_fn, constant_fn, [0.0, 2.0], [1.0, 1.0], pred_xs, noise)
+# test case 2: fixed SE/RBF kernel w lengthscale 0.1
+plot_name = "test_2"
+lengthscales = [0.1, 0.5, 1.0]
+cov_fns = [SquaredExponential(l) for l in lengthscales]
+pred_xs = sort!(collect(LinRange(-10, 10, 200)))
+# test_plot_gp(plot_name, cov_fns, pred_xs, noise)
+
+# test case 3: fixed Periodic kernel w fixed amplitude
+plot_name = "test_3"
+periods = [0.1, 0.5, 1.0]
+scale = 0.5
+cov_fns = [Periodic(scale, period) for period in periods]
+pred_xs = sort!(collect(LinRange(-10, 10, 200)))
+test_plot_gp(plot_name, cov_fns, pred_xs, noise)
